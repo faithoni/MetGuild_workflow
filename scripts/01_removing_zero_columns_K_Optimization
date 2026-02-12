@@ -1,0 +1,195 @@
+import os
+import json
+import logging
+from datetime import datetime
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from sklearn.cluster import KMeans
+from sklearn.metrics import (
+    silhouette_score,
+    calinski_harabasz_score,
+    davies_bouldin_score
+)
+from sklearn.preprocessing import StandardScaler
+
+# -----------------------------
+# Set up logging
+# -----------------------------
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+# -----------------------------
+# Ask user for input file (interactive)
+# -----------------------------
+input_file = input("Enter the input CSV filename/path (e.g., 01_DSK_DB.csv): ").strip()
+if not input_file:
+    raise ValueError("No input file provided.")
+if not os.path.exists(input_file):
+    raise FileNotFoundError(f"File not found: {input_file}")
+
+max_k_str = input("Enter max_k (tests k=2..max_k-1) [default 15]: ").strip()
+max_k = 15 if max_k_str == "" else int(max_k_str)
+if max_k < 3:
+    raise ValueError("max_k must be at least 3 (because clustering is tested for k=2..max_k-1).")
+
+# -----------------------------
+# PART 1: Cleaning (drop all-zero + all-NaN columns, keep Genomes)
+# -----------------------------
+df = pd.read_csv(input_file, encoding="latin1")
+logging.info(f"Columns in the dataset: {df.columns.tolist()}")
+
+if "Genomes" not in df.columns:
+    raise KeyError("'Genomes' column not found in the dataset.")
+
+genomes_column = df["Genomes"]
+df_no_genomes = df.drop(columns=["Genomes"])
+
+df_cleaned = df_no_genomes.loc[:, (df_no_genomes != 0).any(axis=0)]
+df_cleaned = df_cleaned.dropna(axis=1, how="all")
+
+logging.info(f"Original shape (no Genomes): {df_no_genomes.shape}, Cleaned shape: {df_cleaned.shape}")
+
+df_cleaned.insert(0, "Genomes", genomes_column)
+
+base, ext = os.path.splitext(input_file)
+cleaned_output_file = f"{base}_cleaned{ext}"
+df_cleaned.to_csv(cleaned_output_file, index=False)
+logging.info(f"Cleaned dataset saved to {cleaned_output_file}")
+
+# -----------------------------
+# PART 2: K-optimization
+# -----------------------------
+data = pd.read_csv(cleaned_output_file)
+if "Genomes" in data.columns:
+    data = data.set_index("Genomes")
+
+X = data.values
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+
+def evaluate_clustering(X_in, max_k_in):
+    elbow_scores = []
+    silhouette_scores = []
+    calinski_harabasz_scores = []
+    davies_bouldin_scores = []
+
+    for k in range(2, max_k_in):
+        kmeans = KMeans(n_clusters=k, random_state=0)
+        labels = kmeans.fit_predict(X_in)
+
+        elbow_scores.append(kmeans.inertia_)
+        silhouette_scores.append(silhouette_score(X_in, labels))
+        calinski_harabasz_scores.append(calinski_harabasz_score(X_in, labels))
+        davies_bouldin_scores.append(davies_bouldin_score(X_in, labels))
+
+    return elbow_scores, silhouette_scores, calinski_harabasz_scores, davies_bouldin_scores
+
+
+def find_optimal_k(scores, method):
+    if method == "elbow":
+        diffs = np.diff(scores)
+        second_diffs = np.diff(diffs)
+        return int(np.argmin(second_diffs) + 3)
+    if method == "silhouette":
+        return int(np.argmax(scores) + 2)
+    if method == "calinski_harabasz":
+        return int(np.argmax(scores) + 2)
+    if method == "davies_bouldin":
+        return int(np.argmin(scores) + 2)
+    raise ValueError("Unknown method")
+
+
+elbow_scores, silhouette_scores, calinski_harabasz_scores, davies_bouldin_scores = evaluate_clustering(X_scaled, max_k)
+
+optimal_elbow_k = find_optimal_k(elbow_scores, "elbow")
+optimal_silhouette_k = find_optimal_k(silhouette_scores, "silhouette")
+optimal_calinski_k = find_optimal_k(calinski_harabasz_scores, "calinski_harabasz")
+optimal_davies_k = find_optimal_k(davies_bouldin_scores, "davies_bouldin")
+
+print(f"The optimal number of clusters according to the Elbow method is: {optimal_elbow_k}")
+print(f"The optimal number of clusters according to the Silhouette method is: {optimal_silhouette_k}")
+print(f"The optimal number of clusters according to the Calinski-Harabasz index is: {optimal_calinski_k}")
+print(f"The optimal number of clusters according to the Davies-Bouldin index is: {optimal_davies_k}")
+
+# Unique K values (sorted)
+unique_k_values = sorted({optimal_elbow_k, optimal_silhouette_k, optimal_calinski_k, optimal_davies_k})
+print(f"Unique k values to carry forward: {unique_k_values}")
+
+# -----------------------------
+# Plotting
+# -----------------------------
+plt.figure(figsize=(14, 10))
+k_range = range(2, max_k)
+
+plt.subplot(2, 2, 1)
+plt.plot(k_range, elbow_scores, marker="o", label="Inertia")
+plt.scatter(optimal_elbow_k, elbow_scores[optimal_elbow_k - 2], color="red", s=100, edgecolor="black", zorder=5)
+plt.title("Elbow Method")
+plt.xlabel("Number of clusters")
+plt.ylabel("Inertia")
+plt.legend()
+
+plt.subplot(2, 2, 2)
+plt.plot(k_range, silhouette_scores, marker="o", label="Silhouette Score")
+plt.scatter(optimal_silhouette_k, silhouette_scores[optimal_silhouette_k - 2], color="red", s=100, edgecolor="black", zorder=5)
+plt.title("Silhouette Method")
+plt.xlabel("Number of clusters")
+plt.ylabel("Silhouette Score")
+plt.legend()
+
+plt.subplot(2, 2, 3)
+plt.plot(k_range, calinski_harabasz_scores, marker="o", label="Calinski-Harabasz Score")
+plt.scatter(optimal_calinski_k, calinski_harabasz_scores[optimal_calinski_k - 2], color="red", s=100, edgecolor="black", zorder=5)
+plt.title("Calinski-Harabasz Method")
+plt.xlabel("Number of clusters")
+plt.ylabel("Calinski-Harabasz Score")
+plt.legend()
+
+plt.subplot(2, 2, 4)
+plt.plot(k_range, davies_bouldin_scores, marker="o", label="Davies-Bouldin Score")
+plt.scatter(optimal_davies_k, davies_bouldin_scores[optimal_davies_k - 2], color="red", s=100, edgecolor="black", zorder=5)
+plt.title("Davies-Bouldin Method")
+plt.xlabel("Number of clusters")
+plt.ylabel("Davies-Bouldin Score")
+plt.legend()
+
+base_name = os.path.splitext(os.path.basename(cleaned_output_file))[0]
+plot_output_file = f"02_{base_name}_k_opt.png"
+
+out_dir = "02_k_optimization"
+os.makedirs(out_dir, exist_ok=True)
+
+plt.tight_layout()
+plot_path = os.path.join(out_dir, plot_output_file)
+plt.savefig(plot_path, dpi=300)
+logging.info(f"K-optimization plot saved to {plot_path}")
+plt.show()
+
+# -----------------------------
+# ALWAYS: Save manifest for Script 2
+# -----------------------------
+os.makedirs("manifests", exist_ok=True)
+manifest_path = os.path.join("manifests", "optimal_k_values.json")
+
+manifest = {
+    "timestamp": datetime.now().isoformat(timespec="seconds"),
+    "input_file": input_file,
+    "cleaned_output_file": cleaned_output_file,
+    "kopt_plot": plot_path,
+    "optimal_k_by_method": {
+        "elbow": optimal_elbow_k,
+        "silhouette": optimal_silhouette_k,
+        "calinski_harabasz": optimal_calinski_k,
+        "davies_bouldin": optimal_davies_k,
+    },
+    "unique_k_values": unique_k_values
+}
+
+with open(manifest_path, "w", encoding="utf-8") as f:
+    json.dump(manifest, f, indent=2)
+
+logging.info(f"Manifest saved to {manifest_path}")
+print(f"MANIFEST={manifest_path}")
