@@ -1,4 +1,9 @@
 import os
+try:
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+except NameError:
+    pass
+
 import json
 import numpy as np
 import pandas as pd
