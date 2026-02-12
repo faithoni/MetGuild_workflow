@@ -1,4 +1,9 @@
 import os
+try:
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+except NameError:
+    pass
+
 import json
 import pandas as pd
 from sklearn.metrics import pairwise_distances
