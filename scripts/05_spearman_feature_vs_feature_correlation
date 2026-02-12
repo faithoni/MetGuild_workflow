@@ -1,0 +1,281 @@
+import os
+import json
+import numpy as np
+import pandas as pd
+from datetime import datetime
+from scipy.stats import spearmanr
+
+# -----------------------------
+# Config
+# -----------------------------
+CORR_ABS_THRESHOLD = 0.5
+P_THRESHOLD = 0.05
+
+# Outputs go here:
+# e.g. 06_correlation/01_featurevsfeature_correlation/01_kmeans/2_clusters/...
+OUTPUT_ROOT = os.path.join("06_correlation", "01_featurevsfeature_correlation")
+
+# Summary files requested
+SUMMARY_CSV = os.path.join(OUTPUT_ROOT, "01_fvf_correlation_summary.csv")
+SUMMARY_JSON = os.path.join(OUTPUT_ROOT, "01_fvf_correlation_summary.json")
+
+# Inputs we will correlate (produced by Script 4 and Script 5)
+SIGNIFICANT_INPUT_SUFFIXES = [
+    "_chi_stat_sig.csv",              # chi-square significant dataset
+    "_anova_stat_significant.csv",     # ANOVA significant dataset
+]
+
+# -----------------------------
+# Helpers
+# -----------------------------
+def ensure_dir(path: str) -> None:
+    os.makedirs(path, exist_ok=True)
+
+def load_manifest() -> dict:
+    manifest_path = os.path.join("manifests", "optimal_k_values.json")
+    if not os.path.exists(manifest_path):
+        raise FileNotFoundError(
+            f"Manifest not found at {manifest_path}. Run Script 1 first."
+        )
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def load_feature_df(input_file: str) -> pd.DataFrame:
+    """
+    Load the 'significant' dataset and return numeric-only feature dataframe.
+    Drops Genomes + Cluster if present.
+    Coerces to numeric.
+    """
+    df = pd.read_csv(input_file, encoding="latin1")
+
+    drop_cols = [c for c in ["Genomes", "Cluster"] if c in df.columns]
+    if drop_cols:
+        df = df.drop(columns=drop_cols)
+
+    df_num = df.apply(pd.to_numeric, errors="coerce")
+    df_num = df_num.dropna(axis=1, how="all")
+    return df_num
+
+def spearman_corr_and_pvalues(df_num: pd.DataFrame):
+    """
+    Compute Spearman correlation matrix and p-value matrix efficiently.
+    """
+    if df_num.shape[1] < 2:
+        raise ValueError("Need at least 2 features to compute correlations.")
+
+    corr, pvals = spearmanr(df_num.to_numpy(), axis=0, nan_policy="omit")
+    corr = np.asarray(corr)
+    pvals = np.asarray(pvals)
+
+    cols = df_num.columns.to_list()
+    corr_df = pd.DataFrame(corr, index=cols, columns=cols)
+    pval_df = pd.DataFrame(pvals, index=cols, columns=cols)
+    return corr_df, pval_df
+
+def flatten_unique_pairs(corr_df: pd.DataFrame, pval_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Flatten to unique pairs only (Var1 < Var2), removing diagonal + duplicates.
+    """
+    cols = corr_df.columns.to_list()
+    rows = []
+    for i in range(len(cols)):
+        for j in range(i + 1, len(cols)):
+            v1, v2 = cols[i], cols[j]
+            rows.append({
+                "Var1": v1,
+                "Var2": v2,
+                "Correlation": float(corr_df.loc[v1, v2]),
+                "P_value": float(pval_df.loc[v1, v2]),
+            })
+    return pd.DataFrame(rows)
+
+def run_correlation(input_file: str, out_dir: str, out_prefix: str) -> dict:
+    """
+    Writes:
+      - <prefix>_corr_matrix.csv
+      - <prefix>_flattened_corr_pvals.csv
+      - <prefix>_filtered_corr_pvals.csv
+
+    Returns a dict summary of this run (for global summary files).
+    """
+    df_num = load_feature_df(input_file)
+    if df_num.shape[1] < 2:
+        return {
+            "status": "skipped",
+            "reason": "<2 usable numeric features",
+            "features_used": int(df_num.shape[1]),
+            "all_unique_pairs": 0,
+            "filtered_pairs": 0,
+        }
+
+    corr_df, pval_df = spearman_corr_and_pvalues(df_num)
+    flat_df = flatten_unique_pairs(corr_df, pval_df)
+
+    filtered_df = flat_df[
+        (flat_df["Correlation"].abs() >= CORR_ABS_THRESHOLD) &
+        (flat_df["P_value"] < P_THRESHOLD)
+    ].copy()
+
+    ensure_dir(out_dir)
+
+    out_corr_matrix = os.path.join(out_dir, f"{out_prefix}_corr_matrix.csv")
+    out_flat = os.path.join(out_dir, f"{out_prefix}_flattened_corr_pvals.csv")
+    out_filt = os.path.join(out_dir, f"{out_prefix}_filtered_corr_pvals.csv")
+
+    # These overwite by default if the filenames match
+    corr_df.to_csv(out_corr_matrix, index=True)
+    flat_df.to_csv(out_flat, index=False)
+    filtered_df.to_csv(out_filt, index=False)
+
+    return {
+        "status": "ok",
+        "features_used": int(df_num.shape[1]),
+        "all_unique_pairs": int(len(flat_df)),
+        "filtered_pairs": int(len(filtered_df)),
+        "out_corr_matrix": out_corr_matrix,
+        "out_flattened": out_flat,
+        "out_filtered": out_filt,
+    }
+
+# -----------------------------
+# Main
+# -----------------------------
+ensure_dir(OUTPUT_ROOT)
+
+m = load_manifest()
+k_values = m["unique_k_values"]
+cleaned_csv = m["cleaned_output_file"]
+base_stub = os.path.splitext(os.path.basename(cleaned_csv))[0]
+
+print(f"Loaded k values from manifest: {k_values}")
+print(f"Base stub: {base_stub}")
+print(f"Thresholds: |corr| >= {CORR_ABS_THRESHOLD}, p < {P_THRESHOLD}")
+print(f"Outputs will be under: {OUTPUT_ROOT}")
+
+summary_rows = []
+summary_json_entries = []
+
+for k in k_values:
+    print(f"\n=== Correlation for k={k} ===")
+
+    # -----------------------------
+    # KMEANS
+    # -----------------------------
+    kmeans_stat_dir = os.path.join("05_stat_analysis", "01_kmeans", f"{k}_clusters")
+    kmeans_out_dir = os.path.join(OUTPUT_ROOT, "01_kmeans", f"{k}_clusters")
+    ensure_dir(kmeans_out_dir)
+
+    for suffix in SIGNIFICANT_INPUT_SUFFIXES:
+        in_file = os.path.join(kmeans_stat_dir, f"05_{base_stub}_{k}_KM{suffix}")
+        if not os.path.exists(in_file):
+            continue
+
+        label = "" if suffix == "_chi_stat_sig.csv" else "_anova"
+        out_prefix = f"{base_stub}_{k}_KM{label}"
+
+        print(f"  [KMeans] Input: {in_file}")
+        result = run_correlation(in_file, kmeans_out_dir, out_prefix)
+
+        row = {
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "method": "kmeans",
+            "k": int(k),
+            "source": "chi" if label == "" else "anova",
+            "input_file": in_file,
+            "output_dir": kmeans_out_dir,
+            "output_prefix": out_prefix,
+            "status": result.get("status"),
+            "features_used": result.get("features_used"),
+            "all_unique_pairs": result.get("all_unique_pairs"),
+            "filtered_pairs": result.get("filtered_pairs"),
+        }
+        summary_rows.append(row)
+
+        summary_json_entries.append({
+            **row,
+            "thresholds": {"abs_corr": CORR_ABS_THRESHOLD, "p_value": P_THRESHOLD},
+            "outputs": {
+                "corr_matrix": result.get("out_corr_matrix"),
+                "flattened": result.get("out_flattened"),
+                "filtered": result.get("out_filtered"),
+            },
+            "skip_reason": result.get("reason"),
+        })
+
+        if result.get("status") == "ok":
+            print(f"    Features used:    {result['features_used']}")
+            print(f"    All unique pairs: {result['all_unique_pairs']}")
+            print(f"    Filtered pairs:   {result['filtered_pairs']}")
+        else:
+            print(f"    Skipped: {result.get('reason', 'unknown reason')}")
+
+    # -----------------------------
+    # HIERARCHICAL
+    # -----------------------------
+    hier_stat_dir = os.path.join("05_stat_analysis", "02_hierarchical", f"{k}_clusters")
+    hier_out_dir = os.path.join(OUTPUT_ROOT, "02_hierarchical", f"{k}_clusters")
+    ensure_dir(hier_out_dir)
+
+    for suffix in SIGNIFICANT_INPUT_SUFFIXES:
+        in_file = os.path.join(hier_stat_dir, f"05_{base_stub}_{k}_HC{suffix}")
+        if not os.path.exists(in_file):
+            continue
+
+        label = "" if suffix == "_chi_stat_sig.csv" else "_anova"
+        out_prefix = f"{base_stub}_{k}_HC{label}"
+
+        print(f"  [Hierarchical] Input: {in_file}")
+        result = run_correlation(in_file, hier_out_dir, out_prefix)
+
+        row = {
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "method": "hierarchical",
+            "k": int(k),
+            "source": "chi" if label == "" else "anova",
+            "input_file": in_file,
+            "output_dir": hier_out_dir,
+            "output_prefix": out_prefix,
+            "status": result.get("status"),
+            "features_used": result.get("features_used"),
+            "all_unique_pairs": result.get("all_unique_pairs"),
+            "filtered_pairs": result.get("filtered_pairs"),
+        }
+        summary_rows.append(row)
+
+        summary_json_entries.append({
+            **row,
+            "thresholds": {"abs_corr": CORR_ABS_THRESHOLD, "p_value": P_THRESHOLD},
+            "outputs": {
+                "corr_matrix": result.get("out_corr_matrix"),
+                "flattened": result.get("out_flattened"),
+                "filtered": result.get("out_filtered"),
+            },
+            "skip_reason": result.get("reason"),
+        })
+
+        if result.get("status") == "ok":
+            print(f"    Features used:    {result['features_used']}")
+            print(f"    All unique pairs: {result['all_unique_pairs']}")
+            print(f"    Filtered pairs:   {result['filtered_pairs']}")
+        else:
+            print(f"    Skipped: {result.get('reason', 'unknown reason')}")
+
+# -----------------------------
+# Write summary files (overwrite if same names)
+# -----------------------------
+summary_df = pd.DataFrame(summary_rows)
+summary_df.to_csv(SUMMARY_CSV, index=False)
+
+summary_payload = {
+    "created_at": datetime.now().isoformat(timespec="seconds"),
+    "output_root": OUTPUT_ROOT,
+    "thresholds": {"abs_corr": CORR_ABS_THRESHOLD, "p_value": P_THRESHOLD},
+    "runs": summary_json_entries,
+}
+
+with open(SUMMARY_JSON, "w", encoding="utf-8") as f:
+    json.dump(summary_payload, f, indent=2)
+
+print("\nAll correlation runs completed.")
+print(f"Summary CSV saved to:  {SUMMARY_CSV}")
+print(f"Summary JSON saved to: {SUMMARY_JSON}")
