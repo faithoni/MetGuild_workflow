@@ -79,7 +79,7 @@ This manifest contains:
 ---
 
 ## Step 2 — KMeans clustering (for each k from the manifest)
-**Script:** `03_kmeans_clustering.py` (your updated Script 2)
+**Script:** `03_kmeans_clustering.py`
 
 ### What it does
 For each `k` listed in `manifests/optimal_k_values.json`:
@@ -97,7 +97,7 @@ For each `k` listed in `manifests/optimal_k_values.json`:
 ---
 
 ## Step 3 — Hierarchical clustering (for each k from the manifest)
-**Script:** `04_hierarchical_clustering.py` (your updated Script 3)
+**Script:** `04_hierarchical_clustering.py` 
 
 ### What it does
 For each `k` in the manifest:
@@ -114,7 +114,7 @@ For each `k` in the manifest:
 ---
 
 ## Step 4 — Chi-square tests (run on each clustering output)
-**Script:** `05_chi_square.py` (your updated chi-square script)
+**Script:** `05_chi_square.py`
 
 ### What it does
 For each clustering output CSV (KMeans + hierarchical, each `k`):
@@ -131,7 +131,7 @@ Outputs are written under:
 ---
 
 ## Step 5 — ANOVA (run on each clustering output)
-**Script:** `05_anova.py` (your updated ANOVA script)
+**Script:** `05_anova.py` 
 
 ### What it does
 For each clustering output CSV (KMeans + hierarchical, each `k`):
@@ -239,8 +239,8 @@ This prevents cluster IDs from different networks colliding.
 
 ---
 
-## Step 8 — Cytoscape import + PNG export (this scripts doesn't work! switch to the cytoscape app)
-**Script:** `09_network_construction_cytoscape.py` 
+## Step 8 — Cytoscape import + PNG export 
+**Script:** `09_network_construction_cytoscape.py` (this scripts doesn't work! switch to the cytoscape app)
 
 ### What it does
 For each edge list in:
@@ -256,10 +256,7 @@ It:
    - `07_network_construction/cytoscape_pngs/<prefix>.png`
 
 ### Requirements
-- Cytoscape must be running
-- CyREST must be enabled (default)
-- If your CyREST port differs, update:
-  - `CYREST = "http://127.0.0.1:1234/v1"`
+
 
 ---
 
@@ -274,7 +271,7 @@ Typical run order:
 5. Step 5: ANOVA (all outputs)  
 6. Step 6: Correlations (all significant datasets)  
 7. Step 7: Merge filtered correlations → edge list + node attributes  
-8. Step 8: Cytoscape → PNG export (batch)
+8. Step 8: Cytoscape → PNG export 
 
 ---
 
