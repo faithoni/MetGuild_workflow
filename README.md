@@ -239,8 +239,8 @@ This prevents cluster IDs from different networks colliding.
 
 ---
 
-## Step 8 — Cytoscape import + PNG export 
-**Script:** `09_network_construction_cytoscape.py` (this scripts doesn't work! switch to the cytoscape app)
+## Step 8 — Cytoscape import + PNG export (this scripts doesn't work! switch to the cytoscape app)
+**Script:** `09_network_construction_cytoscape.py` 
 
 ### What it does
 For each edge list in:
