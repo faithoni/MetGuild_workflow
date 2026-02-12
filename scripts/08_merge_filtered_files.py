@@ -1,4 +1,9 @@
 import os
+try:
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+except NameError:
+    pass
+
 import json
 import re
 import pandas as pd
@@ -13,12 +18,13 @@ os.makedirs(EDGE_OUTPUT_DIR, exist_ok=True)
 os.makedirs(NODE_OUTPUT_DIR, exist_ok=True)
 
 SUMMARY_DIR = os.path.join("07_network_construction")
+os.makedirs(SUMMARY_DIR, exist_ok=True)
 
 # Existing merge summary
 MERGE_SUMMARY_CSV = os.path.join(SUMMARY_DIR, "01_edge_list_merge_summary.csv")
 MERGE_SUMMARY_JSON = os.path.join(SUMMARY_DIR, "01_edge_list_merge_summary.json")
 
-# NEW: node attributes summary
+# Node attributes summary
 NODE_SUMMARY_CSV = os.path.join(SUMMARY_DIR, "02_node_attributes_summary.csv")
 NODE_SUMMARY_JSON = os.path.join(SUMMARY_DIR, "02_node_attributes_summary.json")
 
@@ -26,9 +32,19 @@ FVSF_ROOT = os.path.join("06_correlation", "01_featurevsfeature_correlation")
 FVSCL_ROOT = os.path.join("06_correlation", "02_featurevscluster_correlation")
 CLVSCL_ROOT = os.path.join("06_correlation", "03_clustervscluster_correlation")
 
-FVSF_FILE = "{base}_{k}_{method}_filtered_corr_pvals.csv"
-FVSCL_FILE = "{base}_{k}_{method}_filtered_corr_pvalues_long.csv"
-CLVSCL_FILE = "{base}_{k}_{method}_filtered_results.csv"
+# Support BOTH patterns: non-ANOVA and ANOVA-tagged
+FVSF_FILES = [
+    "{base}_{k}_{method}_filtered_corr_pvals.csv",
+    "{base}_{k}_{method}_anova_filtered_corr_pvals.csv",
+]
+FVSCL_FILES = [
+    "{base}_{k}_{method}_filtered_corr_pvalues_long.csv",
+    "{base}_{k}_{method}_anova_filtered_corr_pvalues_long.csv",
+]
+CLVSCL_FILES = [
+    "{base}_{k}_{method}_filtered_results.csv",
+    "{base}_{k}_{method}_anova_filtered_results.csv",
+]
 
 CLUSTER_CORE_RE = re.compile(r"^C\d+(?:\.\d+)?$")
 
@@ -54,22 +70,26 @@ def safe_read_csv(path: str):
         return None, f"read_error: {path} ({e})"
 
 def build_paths(base: str, k: int, method: str):
+    """
+    Return candidate paths (lists) for each correlation type.
+    We will try both non-ANOVA and ANOVA-tagged filenames.
+    """
     method_folder = "01_kmeans" if method == "KM" else "02_hierarchical"
     cluster_folder = f"{k}_clusters"
 
-    fvsf_path = os.path.join(
-        FVSF_ROOT, method_folder, cluster_folder,
-        FVSF_FILE.format(base=base, k=k, method=method)
-    )
-    fvscl_path = os.path.join(
-        FVSCL_ROOT, method_folder, cluster_folder,
-        FVSCL_FILE.format(base=base, k=k, method=method)
-    )
-    clvscl_path = os.path.join(
-        CLVSCL_ROOT, method_folder, cluster_folder,
-        CLVSCL_FILE.format(base=base, k=k, method=method)
-    )
-    return fvsf_path, fvscl_path, clvscl_path
+    fvsf_paths = [
+        os.path.join(FVSF_ROOT, method_folder, cluster_folder, pat.format(base=base, k=k, method=method))
+        for pat in FVSF_FILES
+    ]
+    fvscl_paths = [
+        os.path.join(FVSCL_ROOT, method_folder, cluster_folder, pat.format(base=base, k=k, method=method))
+        for pat in FVSCL_FILES
+    ]
+    clvscl_paths = [
+        os.path.join(CLVSCL_ROOT, method_folder, cluster_folder, pat.format(base=base, k=k, method=method))
+        for pat in CLVSCL_FILES
+    ]
+    return fvsf_paths, fvscl_paths, clvscl_paths
 
 def normalize_edge_df(df: pd.DataFrame, source: str) -> pd.DataFrame:
     cols = {c.lower(): c for c in df.columns}
@@ -185,28 +205,39 @@ def main():
             intended_edge_path = os.path.join(EDGE_OUTPUT_DIR, f"{prefix}_edge_list.csv")
             intended_node_path = os.path.join(NODE_OUTPUT_DIR, f"{prefix}_node_attributes.csv")
 
-            fvsf_path, fvscl_path, clvscl_path = build_paths(base_stub, k, method)
+            fvsf_paths, fvscl_paths, clvscl_paths = build_paths(base_stub, k, method)
 
             dfs = []
             issues = []
+            inputs_used = {"feature_vs_feature": [], "feature_vs_cluster": [], "cluster_vs_cluster": []}
 
-            df1, err1 = safe_read_csv(fvsf_path)
-            if err1:
-                issues.append(err1)
-            else:
-                dfs.append(normalize_edge_df(df1, source="feature_vs_feature"))
+            # Load all existing candidates; if both exist, include both (dedupe later)
+            for p in fvsf_paths:
+                df, err = safe_read_csv(p)
+                if err:
+                    issues.append(err)
+                else:
+                    src = "feature_vs_feature_anova" if "_anova_" in os.path.basename(p) else "feature_vs_feature"
+                    dfs.append(normalize_edge_df(df, source=src))
+                    inputs_used["feature_vs_feature"].append(p)
 
-            df2, err2 = safe_read_csv(fvscl_path)
-            if err2:
-                issues.append(err2)
-            else:
-                dfs.append(normalize_edge_df(df2, source="feature_vs_cluster"))
+            for p in fvscl_paths:
+                df, err = safe_read_csv(p)
+                if err:
+                    issues.append(err)
+                else:
+                    src = "feature_vs_cluster_anova" if "_anova_" in os.path.basename(p) else "feature_vs_cluster"
+                    dfs.append(normalize_edge_df(df, source=src))
+                    inputs_used["feature_vs_cluster"].append(p)
 
-            df3, err3 = safe_read_csv(clvscl_path)
-            if err3:
-                issues.append(err3)
-            else:
-                dfs.append(normalize_edge_df(df3, source="cluster_vs_cluster"))
+            for p in clvscl_paths:
+                df, err = safe_read_csv(p)
+                if err:
+                    issues.append(err)
+                else:
+                    src = "cluster_vs_cluster_anova" if "_anova_" in os.path.basename(p) else "cluster_vs_cluster"
+                    dfs.append(normalize_edge_df(df, source=src))
+                    inputs_used["cluster_vs_cluster"].append(p)
 
             ts_now = datetime.now().isoformat(timespec="seconds")
 
@@ -228,19 +259,10 @@ def main():
                     "nodes": 0,
                     "clusters": 0,
                     "features": 0,
-                    "input_fvsf": fvsf_path,
-                    "input_fvscl": fvscl_path,
-                    "input_clvscl": clvscl_path,
+                    "inputs_used": inputs_used,
                 }
                 merge_summary_rows.append(merge_row)
-                merge_summary_json_runs.append({
-                    **merge_row,
-                    "inputs": {
-                        "feature_vs_feature": fvsf_path,
-                        "feature_vs_cluster": fvscl_path,
-                        "cluster_vs_cluster": clvscl_path,
-                    }
-                })
+                merge_summary_json_runs.append(merge_row)
 
                 node_row = {
                     "timestamp": ts_now,
@@ -262,10 +284,8 @@ def main():
             combined = apply_cluster_suffix_to_edges(combined, method=method, k=int(k))
             deduped = dedupe_undirected_edges(combined)
 
-            # Write edge list safely
             edge_path_used = safe_to_csv(deduped, intended_edge_path, index=False)
 
-            # Build + write node attributes safely
             node_attr = build_node_attributes(deduped)
             node_path_used = safe_to_csv(node_attr, intended_node_path, index=False)
 
@@ -278,7 +298,6 @@ def main():
                 f"node_attributes: {node_path_used} (nodes={n_nodes}, clusters={n_clusters}, features={n_features})"
             )
 
-            # Merge summary row
             merge_row = {
                 "timestamp": ts_now,
                 "k": int(k),
@@ -293,21 +312,11 @@ def main():
                 "nodes": n_nodes,
                 "clusters": n_clusters,
                 "features": n_features,
-                "input_fvsf": fvsf_path,
-                "input_fvscl": fvscl_path,
-                "input_clvscl": clvscl_path,
+                "inputs_used": inputs_used,
             }
             merge_summary_rows.append(merge_row)
-            merge_summary_json_runs.append({
-                **merge_row,
-                "inputs": {
-                    "feature_vs_feature": fvsf_path,
-                    "feature_vs_cluster": fvscl_path,
-                    "cluster_vs_cluster": clvscl_path,
-                }
-            })
+            merge_summary_json_runs.append(merge_row)
 
-            # Node attributes summary row
             node_row = {
                 "timestamp": ts_now,
                 "k": int(k),
