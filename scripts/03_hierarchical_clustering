@@ -1,0 +1,125 @@
+import os
+import json
+import pandas as pd
+import scipy.cluster.hierarchy as sch
+from scipy.spatial.distance import pdist
+from scipy.cluster.hierarchy import fcluster
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# -----------------------------
+# Auto-load manifest from Script 1
+# -----------------------------
+manifest_path = os.path.join("manifests", "optimal_k_values.json")
+if not os.path.exists(manifest_path):
+    raise FileNotFoundError(
+        f"Manifest not found at {manifest_path}. "
+        "Run Script 1 first (it writes this file automatically)."
+    )
+
+with open(manifest_path, "r", encoding="utf-8") as f:
+    m = json.load(f)
+
+k_values = m["unique_k_values"]
+file_path = m["cleaned_output_file"]
+
+print(f"Loaded manifest: {manifest_path}")
+print(f"Cleaned CSV: {file_path}")
+print(f"Will run hierarchical clustering for k values: {k_values}")
+
+if not os.path.exists(file_path):
+    raise FileNotFoundError(f"Cleaned CSV not found: {file_path}")
+
+# -----------------------------
+# Load the data
+# -----------------------------
+data_raw = pd.read_csv(file_path, encoding="latin1")
+
+# Set Genomes as index explicitly
+if "Genomes" in data_raw.columns:
+    data_raw = data_raw.set_index("Genomes")
+else:
+    raise KeyError("'Genomes' column not found in the cleaned CSV.")
+
+# Check if there are enough rows for clustering
+if len(data_raw) <= 1:
+    raise SystemExit("Not enough data for clustering (need > 1 row).")
+
+# -----------------------------
+# Preprocess once (numeric + presence/absence)
+# -----------------------------
+data_bin = data_raw.apply(pd.to_numeric, errors="coerce").fillna(0)
+data_bin = (data_bin > 0).astype(int)
+
+# -----------------------------
+# Distance + hierarchical clustering (compute linkage once)
+# -----------------------------
+# You used Euclidean distance; keeping it the same:
+dist_matrix = pdist(data_bin.values, metric="euclidean")
+
+# Average linkage (same as your script)
+hclust_result = sch.linkage(dist_matrix, method="average")
+
+# -----------------------------
+# Output base directory
+# -----------------------------
+output_base_dir = "03_04_clustering/02_hierarchical"
+os.makedirs(output_base_dir, exist_ok=True)
+
+base_stub = os.path.splitext(os.path.basename(file_path))[0]
+
+# -----------------------------
+# Loop over each k from manifest
+# -----------------------------
+for k_optimal in k_values:
+    print(f"\n=== Running Hierarchical Clustering for k={k_optimal} ===")
+
+    # Assign clusters
+    clusters = fcluster(hclust_result, k_optimal, criterion="maxclust")
+
+    # Add the cluster assignments as the first column in the dataset
+    data_out = data_bin.copy()
+    data_out.insert(0, "Cluster", clusters)
+
+    # Output directory for this k
+    output_directory = os.path.join(output_base_dir, f"{k_optimal}_clusters")
+    os.makedirs(output_directory, exist_ok=True)
+
+    # Save clustered dataset
+    output_file = os.path.join(output_directory, f"04_{base_stub}_{k_optimal}_HC.csv")
+    data_out.to_csv(output_file)
+    print(f"Clustered data saved to: {output_file}")
+
+    # -----------------------------
+    # Plot dendrogram (and color labels by cluster)
+    # -----------------------------
+    # Generate a color palette with enough colors (same logic as yours)
+    colors = sns.color_palette("Set3", n_colors=min(12, k_optimal)) + sns.color_palette(
+        "hsv", n_colors=max(k_optimal - 12, 0)
+    )
+
+    plt.figure(figsize=(10, 7))
+    sch.dendrogram(
+        hclust_result,
+        labels=data_bin.index.astype(str).tolist(),
+        color_threshold=0,
+        above_threshold_color="black"
+    )
+
+    # Color label text according to cluster assignment
+    label_colors = {str(data_bin.index[i]): colors[clusters[i] - 1] for i in range(len(clusters))}
+    ax = plt.gca()
+    for lbl in ax.get_xmajorticklabels():
+        lbl.set_color(label_colors.get(lbl.get_text(), "black"))
+
+    plt.title(f"Dendrogram of Hierarchical Clustering (k={k_optimal})")
+    plt.xlabel("Samples")
+
+    plot_output_file = os.path.join(output_directory, f"04_{base_stub}_{k_optimal}_HC.png")
+    plt.tight_layout()
+    plt.savefig(plot_output_file, dpi=300)
+    plt.close()
+
+    print(f"Plot saved to: {plot_output_file}")
+
+print("\nAll hierarchical clustering runs completed.")
