@@ -1,4 +1,9 @@
 import os
+try:
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+except NameError:
+    pass
+
 import json
 import numpy as np
 import pandas as pd
@@ -8,7 +13,7 @@ from scipy.stats import spearmanr
 # -----------------------------
 # Config
 # -----------------------------
-# Filter: keep correlations >= 0.5 and p < 0.05 (matches your R script)
+# Filter: keep correlations >= 0.5 and p < 0.05 
 CORR_THRESHOLD = 0.5
 P_THRESHOLD = 0.05
 
