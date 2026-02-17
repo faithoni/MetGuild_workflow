@@ -20,11 +20,9 @@ os.makedirs(NODE_OUTPUT_DIR, exist_ok=True)
 SUMMARY_DIR = os.path.join("07_network_construction")
 os.makedirs(SUMMARY_DIR, exist_ok=True)
 
-# Existing merge summary
 MERGE_SUMMARY_CSV = os.path.join(SUMMARY_DIR, "01_edge_list_merge_summary.csv")
 MERGE_SUMMARY_JSON = os.path.join(SUMMARY_DIR, "01_edge_list_merge_summary.json")
 
-# Node attributes summary
 NODE_SUMMARY_CSV = os.path.join(SUMMARY_DIR, "02_node_attributes_summary.csv")
 NODE_SUMMARY_JSON = os.path.join(SUMMARY_DIR, "02_node_attributes_summary.json")
 
@@ -32,7 +30,6 @@ FVSF_ROOT = os.path.join("06_correlation", "01_featurevsfeature_correlation")
 FVSCL_ROOT = os.path.join("06_correlation", "02_featurevscluster_correlation")
 CLVSCL_ROOT = os.path.join("06_correlation", "03_clustervscluster_correlation")
 
-# Support BOTH patterns: non-ANOVA and ANOVA-tagged
 FVSF_FILES = [
     "{base}_{k}_{method}_filtered_corr_pvals.csv",
     "{base}_{k}_{method}_anova_filtered_corr_pvals.csv",
@@ -70,10 +67,6 @@ def safe_read_csv(path: str):
         return None, f"read_error: {path} ({e})"
 
 def build_paths(base: str, k: int, method: str):
-    """
-    Return candidate paths (lists) for each correlation type.
-    We will try both non-ANOVA and ANOVA-tagged filenames.
-    """
     method_folder = "01_kmeans" if method == "KM" else "02_hierarchical"
     cluster_folder = f"{k}_clusters"
 
@@ -123,6 +116,18 @@ def normalize_edge_df(df: pd.DataFrame, source: str) -> pd.DataFrame:
     out["source"] = source
     return out
 
+def filter_out_perfect_corr(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remove perfect correlations from the edge list.
+    - Drops rows where abs(weight) == 1 (covers 1 and -1).
+    - Also drops rows with missing/non-numeric weights.
+    """
+    out = df.copy()
+    out["weight"] = pd.to_numeric(out["weight"], errors="coerce")
+    out = out.dropna(subset=["weight"])
+    out = out[out["weight"].abs() < 1.0]
+    return out
+
 def _strip_cluster_prefix(s: str) -> str:
     s = str(s).strip()
     if s.lower().startswith("cluster "):
@@ -164,9 +169,6 @@ def build_node_attributes(edge_df: pd.DataFrame) -> pd.DataFrame:
     return attr.sort_values(by=["Group", "Node"]).reset_index(drop=True)
 
 def safe_to_csv(df: pd.DataFrame, target_path: str, index: bool = False) -> str:
-    """
-    If target is locked (Excel), write to timestamped fallback; return actual path written.
-    """
     try:
         df.to_csv(target_path, index=index)
         return target_path
@@ -211,7 +213,6 @@ def main():
             issues = []
             inputs_used = {"feature_vs_feature": [], "feature_vs_cluster": [], "cluster_vs_cluster": []}
 
-            # Load all existing candidates; if both exist, include both (dedupe later)
             for p in fvsf_paths:
                 df, err = safe_read_csv(p)
                 if err:
@@ -243,7 +244,6 @@ def main():
 
             if not dfs:
                 print(f"[{prefix}] SKIP: no input files found/readable.")
-
                 merge_row = {
                     "timestamp": ts_now,
                     "k": int(k),
@@ -255,7 +255,9 @@ def main():
                     "output_edge_list": intended_edge_path,
                     "output_node_attributes": intended_node_path,
                     "rows_combined": 0,
+                    "rows_after_filter": 0,
                     "rows_deduped": 0,
+                    "rows_removed_weight_eq_1": 0,
                     "nodes": 0,
                     "clusters": 0,
                     "features": 0,
@@ -281,8 +283,15 @@ def main():
                 continue
 
             combined = pd.concat(dfs, ignore_index=True).dropna(subset=["node1", "node2"])
-            combined = apply_cluster_suffix_to_edges(combined, method=method, k=int(k))
-            deduped = dedupe_undirected_edges(combined)
+            n_before = len(combined)
+
+            # Remove perfect correlations (abs(weight) == 1)
+            filtered = filter_out_perfect_corr(combined)
+            n_after = len(filtered)
+            n_removed = n_before - n_after
+
+            filtered = apply_cluster_suffix_to_edges(filtered, method=method, k=int(k))
+            deduped = dedupe_undirected_edges(filtered)
 
             edge_path_used = safe_to_csv(deduped, intended_edge_path, index=False)
 
@@ -294,7 +303,8 @@ def main():
             n_features = int((node_attr["Group"] == "feature").sum())
 
             print(
-                f"[{prefix}] edge_list: {edge_path_used} (combined={len(combined)}, deduped={len(deduped)}) | "
+                f"[{prefix}] removed(|w|==1)={n_removed} | "
+                f"edge_list: {edge_path_used} (combined={n_before}, after_filter={n_after}, deduped={len(deduped)}) | "
                 f"node_attributes: {node_path_used} (nodes={n_nodes}, clusters={n_clusters}, features={n_features})"
             )
 
@@ -307,8 +317,10 @@ def main():
                 "issues": "; ".join(issues) if issues else "",
                 "output_edge_list": edge_path_used,
                 "output_node_attributes": node_path_used,
-                "rows_combined": int(len(combined)),
+                "rows_combined": int(n_before),
+                "rows_after_filter": int(n_after),
                 "rows_deduped": int(len(deduped)),
+                "rows_removed_weight_eq_1": int(n_removed),
                 "nodes": n_nodes,
                 "clusters": n_clusters,
                 "features": n_features,
@@ -331,7 +343,6 @@ def main():
             node_summary_rows.append(node_row)
             node_summary_json_runs.append(node_row)
 
-    # Write summaries (overwrite)
     pd.DataFrame(merge_summary_rows).to_csv(MERGE_SUMMARY_CSV, index=False)
     with open(MERGE_SUMMARY_JSON, "w", encoding="utf-8") as f:
         json.dump({
