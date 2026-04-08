@@ -67,12 +67,12 @@ This workflow was tested with:
 ## Setup/installation
 
 ## Option 1: Conda
-
 ```bash
 conda env create -f env/environment.yml
 conda activate manuscript-workflow
 
-## 9. How to run the analysis
+
+**## 9. How to run the analysis**
 
 ### If stepwise
 ```md
