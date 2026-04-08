@@ -1,3 +1,32 @@
+Repository for: [Manuscript Title]
+
+This repository contains the code, data pointers, and workflow used to reproduce the analyses and figures for:
+
+Author A, Author B, Author C. Year. Full manuscript title. Journal. DOI
+
+Overview
+
+This repository provides the full workflow used in the manuscript, from genome feature presence/absence input data through preprocessing, clustering, statistical testing, correlation analysis, and network construction/visualization. The workflow is designed both to reproduce the published results and to serve as a template for similar ecological or bioinformatics studies.
+
+Specifically, this workflow takes a genome feature presence/absence table and produces:
+
+optimized clustering choices,
+clustering outputs from KMeans and hierarchical clustering,
+statistical test results from Chi-square and ANOVA analyses,
+correlation analyses (feature–feature, feature–cluster, and cluster–cluster),
+network files for Cytoscape, and
+exported network visualizations.
+Repository contents
+data_raw/ – raw input data and metadata
+data_processed/ – cleaned and intermediate datasets
+scripts/ – analysis scripts in execution order
+workflow/ – pipeline definitions or notebooks
+results/ – model outputs and derived tables
+figures/ – generated figures for the manuscript
+manuscript/ – manuscript text, supplementary material, and references
+
+
+
 # Repository for: [Manuscript Title]
 
 This repository contains the code, data pointers, and workflow used to reproduce the analyses and figures for:
