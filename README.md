@@ -66,7 +66,7 @@ This workflow was tested with:
 
 ## Setup/installation
 
-### Option 1: Conda
+## Option 1: Conda
 
 ```bash
 conda env create -f env/environment.yml
