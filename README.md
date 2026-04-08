@@ -1,3 +1,128 @@
+# Repository for: [Manuscript Title]
+
+This repository contains the code, data pointers, and workflow used to reproduce the analyses and figures for:
+
+Author A, Author B, Author C. Year. *Full manuscript title*. Journal. DOI
+
+## Overview
+
+This repository provides the full workflow used in the manuscript, from raw input data through preprocessing, analysis, visualization, and manuscript figures. The workflow is designed both to reproduce the published results and to serve as a template for similar ecological/bioinformatics studies.
+
+## Repository contents
+
+- `data_raw/` – raw or source input data metadata
+- `data_processed/` – cleaned and intermediate datasets
+- `scripts/` – analysis scripts in execution order
+- `workflow/` – pipeline definitions or notebooks
+- `results/` – model outputs and derived tables
+- `figures/` – generated figures for the manuscript
+- `manuscript/` – manuscript text, supplementary material, and references
+- `env/` – environment files (conda, Docker, renv, etc.)
+
+
+
+## Workflow summary
+
+The workflow consists of xxx main steps:
+
+-
+-
+-
+-
+
+
+
+## Reproducibility
+
+This repository reproduces:
+-
+-
+-
+-
+
+## Data availability
+
+Raw data are available from:
+- [repository / accession / DOI]
+
+Because some inputs are too large or restricted, they are not stored directly in this repository. To reproduce the analyses, download them using the instructions in `data_raw/README.md`.
+
+Processed data required to reproduce the published figures are included in `data_processed/`.
+
+
+## Software requirements
+
+This workflow was tested with:
+
+- R 4.3.2
+- Python 3.11
+- Snakemake 8.0
+- BLAST 2.14
+- package versions listed in:
+  - `renv.lock`
+  - `environment.yml`
+ 
+
+
+## Setup/installation
+
+### Option 1: Conda
+
+```bash
+conda env create -f env/environment.yml
+conda activate manuscript-workflow
+
+
+## 9. How to run the analysis
+
+### If stepwise
+```md
+## Running the workflow
+
+Run scripts in the following order:
+
+1. `scripts/01_
+2. `scripts/02_
+3. `scripts/03_
+4. `scripts/04
+5. `scripts/05`
+
+
+## Expected outputs
+
+
+## Project structure
+
+```text
+.
+├── README.md
+├── config/
+├── data_raw/
+├── data_processed/
+├── scripts/
+├── workflow/
+├── results/
+├── figures/
+├── manuscript/
+└── env/
+
+
+## License
+
+Code is released under the MIT License.
+Data are released under CC-BY 4.0 unless otherwise stated.
+
+
+## Contact
+
+For questions about the workflow, open a GitHub issue or contact:
+Name – email@domain
+
+
+
+
+
+
 # Clustering → Statistics → Correlation → Networks (Cytoscape) Workflow
 
 This repository contains a stepwise workflow to go from a genome feature presence/absence table to:
