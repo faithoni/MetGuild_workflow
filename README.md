@@ -4,6 +4,13 @@ This repository contains the code, data pointers, and workflow used to reproduce
 
 Author A, Author B, Author C. Year. *Full manuscript title*. Journal. DOI
 
+## Abstract
+Metabolic niche partitioning links genome-encoded functions to community assembly and ecological roles, yet delineating these niches directly from genome-centric metagenomes remains limited by the lack of standardized workflows. Here, we present a semi-automated, genome-centric framework for defining metabolic niches in microbial consortia and demonstrate its application in a model sulfate-reducing, benzene-degrading enrichment culture. 
+We sequenced the solid and liquid phases of the culture and reconstructed metagenome-assembled genomes (MAGs) using MuDoGeR. To capture functional diversity, we integrated annotations from multiple biological knowledge domains, including genes involved in anaerobic aromatic degradation, KEGG modules and reactions, genome-scale metabolic reconstructions, and PROKKA, resulting in six presence-absence datasets. MAGs were grouped by shared functional traits using K-means and hierarchical clustering, followed by ANOVA and chi-square (p < 0.05) statistical filtering. Spearman correlation (ρ ≥ 0.5) further refined trait associations and revealed functional co-occurrence patterns which were visualized as undirected, weighted networks in Cytoscape. Network topology was analysed using the Markov clustering algorithm to identify functional hubs, which were subsequently organized into metabolic niches guided by biochemical pathway knowledge. 
+We recovered 127 MAGs (120 Bacteria, 7 Archaea) and dereplicated them into 52 species-level operational taxonomic units. We identified XX distinct functional network hubs, which were resolved into XX metabolic niches, including aromatic compound degradation and carbon fixation niches. While most MAGs were linked to multiple niches, suggesting functional redundancy, a few performed bottleneck roles such as acetogenesis. 
+Our workflow provides a systematic, scalable approach to defining metabolic niches from metagenomic data and to illuminating microbial cooperation, niche overlaps, and key functional contributors within complex microbial ecosystems.
+
+
 ## Overview
 
 This repository provides the full workflow used in the manuscript, from raw input data through preprocessing, analysis, visualization, and manuscript figures. The workflow is designed both to reproduce the published results and to serve as a template for similar ecological/bioinformatics studies.
