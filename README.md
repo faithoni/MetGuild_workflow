@@ -61,21 +61,25 @@ This workflow was tested with:
 - package versions listed in:
   - `renv.lock`
   - `environment.yml`
+
+
  
 
 
 ## Setup/installation
 
 ## Option 1: Conda
-```bash
+bash
 conda env create -f env/environment.yml
 conda activate manuscript-workflow
+
+
 
 
 **## 9. How to run the analysis**
 
 ### If stepwise
-```md
+md
 ## Running the workflow
 
 Run scripts in the following order:
@@ -84,7 +88,7 @@ Run scripts in the following order:
 2. `scripts/02_
 3. `scripts/03_
 4. `scripts/04
-5. `scripts/05`
+5. `scripts/05
 
 
 ## Expected outputs
@@ -92,7 +96,7 @@ Run scripts in the following order:
 
 ## Project structure
 
-```text
+
 .
 ├── README.md
 ├── config/
