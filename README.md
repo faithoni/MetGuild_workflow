@@ -72,7 +72,6 @@ This workflow was tested with:
 conda env create -f env/environment.yml
 conda activate manuscript-workflow
 
-
 ## 9. How to run the analysis
 
 ### If stepwise
