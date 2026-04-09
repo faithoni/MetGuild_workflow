@@ -109,7 +109,7 @@ user-defined configuration files
 The minimum requirement for downstream analysis is at least one dataset matrix generated from the genomes.
 
 ## Repository structure
-
+```text
 .
 ├── README.md
 ├── config/
@@ -141,7 +141,7 @@ The minimum requirement for downstream analysis is at least one dataset matrix g
 ├── tables/
 ├── manuscript/
 └── LICENSE
-
+```
 
 #### Downstream analysis scripts
 
