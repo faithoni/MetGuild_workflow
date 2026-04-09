@@ -131,15 +131,6 @@ The minimum requirement for downstream analysis is at least one dataset matrix g
 │   ├── 07_spearman_cluster_vs_cluster_correlation.py/
 │   └── 08_merge_filtered_files.py/
   
-
-├── workflow/
-│   ├── manifests/
-│   ├── notebooks/
-│   └── pipeline_notes/
-├── intermediate/
-│   ├── 00_mag_recovery/
-│   ├── 01_dataset_generation/
-│   └── 02_downstream_analysis/
 ├── outputs/
 │   ├── datasets/
 │   ├── clustering_results/
@@ -148,102 +139,64 @@ The minimum requirement for downstream analysis is at least one dataset matrix g
 │   ├── network_files/
 │   └── summary_tables/
 ├── figures/
+├── tables/
 ├── manuscript/
 └── LICENSE
-
-Folder organization
-inputs/
-
-Contains all starting materials required to run the workflow, including raw reads, genome FASTA files, metadata, curated pathway definitions, KEGG mappings, and pointers to large external datasets.
-
-intermediate/
-
-Contains stepwise outputs produced throughout the workflow, including MAG recovery results, annotation outputs, cleaned datasets, clustering outputs, statistical results, and correlation tables. These files are retained to support reproducibility and troubleshooting.
-
-outputs/
-
-Contains the main final products of the workflow, including processed dataset matrices, clustering summaries, statistical outputs, correlation results, edge lists, node tables, and network-ready files.
 
 Downstream analysis scripts
 
 The downstream analysis begins with at least one selected dataset matrix and proceeds through the following scripts:
 
-01_removing_zero_columns_K_Optimization.py
+#### 01_removing_zero_columns_K_Optimization.py
 Cleans the dataset and identifies candidate K values.
-02_kmeans_mds_clustering.py
+#### 02_kmeans_mds_clustering.py
 Performs K-means clustering and multidimensional scaling.
-03_hierarchical_clustering.py
+#### 03_hierarchical_clustering.py
 Performs hierarchical clustering.
-04_ANOVA_testing.py
+#### 04_ANOVA_testing.py
 Used for proportion/completion datasets.
-04_chi-square_testing.py
+#### 04_chi-square_testing.py
 Used for binary datasets.
-05_spearman_feature_vs_feature_correlation.py
+#### 05_spearman_feature_vs_feature_correlation.py
 Computes correlations among features.
-06_spearman_feature_vs_cluster_correlation.py
+#### 06_spearman_feature_vs_cluster_correlation.py
 Computes correlations between features and cluster groups.
-07_spearman_cluster_vs_cluster_correlation.py
+#### 07_spearman_cluster_vs_cluster_correlation.py
 Computes correlations among clustering outputs.
-08_merge_filtered_files.py
+#### 08_merge_filtered_files.py
 Merges filtered results into edge lists and node attribute tables for network construction.
-Running the workflow
 
-A typical execution order is:
 
-Dataset generation
-MAG recovery
-targeted annotation
-pathway completion calculation
-KEGG module detection
-KEGG module completion calculation
-PROKKA annotation
-filtering of hypothetical proteins
-CarveMe reconstruction
-memote quality assessment
-Downstream analysis
-cleaning and K optimization
-K-means + MDS clustering
-hierarchical clustering
-ANOVA or chi-square testing, depending on dataset type
-feature-feature correlation
-feature-cluster correlation
-cluster-cluster correlation
-merge filtered files for network construction
-Network visualization
-import edge and node tables into Cytoscape for network construction and export
-Expected outputs
+#### A typical workflow execution order is:
+
+Dataset generation->MAG recovery->targeted annotation->pathway completion calculation->KEGG module detection->KEGG module completion calculation->PROKKA annotation->filtering of hypothetical proteins->CarveMe reconstruction->memote quality assessment
+
+#### Downstream analysis: 
+
+cleaning and K optimization->K-means + MDS clustering->hierarchical clustering->ANOVA or chi-square testing->correlation analyses->network construction
+
+#### Expected outputs
 
 Typical outputs include:
 
-one or more functional/metabolic dataset matrices
-cleaned matrices for clustering
-K optimization summaries
-K-means and hierarchical clustering outputs
-ANOVA or chi-square result tables
-feature-feature, feature-cluster, and cluster-cluster correlation tables
-merged edge lists and node attribute tables
-Cytoscape-ready network files
-figures and summary tables used in the manuscript
-Reproducibility
+-one or more functional/metabolic dataset matrices
+-cleaned matrices for clustering
+-K optimization summaries/ figures
+-K-means and hierarchical clustering outputs
+-ANOVA or chi-square result tables
+-feature-feature, feature-cluster, and cluster-cluster correlation tables
+-merged edge lists and node attribute tables
+-Cytoscape network files
+-figures and summary tables used in the manuscript
 
-This repository reproduces:
-
-genome-resolved functional/metabolic datasets derived from MAGs
-clustering of genomes by shared functional potential
-statistical filtering of traits across cluster groups
-correlation-based network inputs for metabolic niche interpretation
-manuscript figures and summary outputs
-Data availability
+#### Data availability
 
 Raw data are available from:
 
 [repository / accession / DOI]
 
-Because some inputs are too large or restricted, they are not stored directly in this repository. Instructions for obtaining these files are provided in inputs/.
 
-Processed data required to reproduce the published analyses and figures are included in outputs/ where appropriate.
-
-Software requirements
+### Software requirements
 
 This workflow was tested with:
 
@@ -252,12 +205,13 @@ Python 3.11
 Snakemake 8.0
 BLAST 2.14
 
+
 Additional dependencies and package versions are listed in:
 
 env/environment.yml
-renv.lock or equivalent lock files
 
-External tools used in the full workflow may include:
+
+### External tools used in the full workflow may include:
 
 MuDoGeR
 standena
