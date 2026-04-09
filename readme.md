@@ -21,7 +21,7 @@ The framework is modular. Users may generate one or more functional potential da
 
 The workflow consists of three phases:
 
- ## 1. Genome recovery and dataset generation
+ # 1. Genome recovery and dataset generation
 
 Genome FASTA files are obtained either from using the Multi-domain Genome Recovery tool- MuDoGeR (DOI: 10.1111/1755-0998.13904) or from any alternative MAG recovery tool. These genomes are then functionally annotated using one or more complementary approaches, including targeted pathway/gene detection, KEGG module profiling, genome-scale metabolic reconstruction, and whole-genome annotation. These steps produce one or more matrix-style datasets describing the functional potential of each genome.
 
