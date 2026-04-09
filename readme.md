@@ -182,7 +182,7 @@ env/environment.yml
 
 #### External tools used in the full workflow may include:
 
-MuDoGeR (#DOI: 10.1111/1755-0998.13904#)
+MuDoGeR [DOI: 10.1111/1755-0998.13904#]
 standena
 METABOLIC
 PROKKA
