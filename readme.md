@@ -139,7 +139,7 @@ Users may analyze one dataset or several datasets independently.
 ```
 
 
-Downstream analysis scripts
+## Downstream analysis scripts
 
 The downstream analysis begins with at least one selected dataset matrix and proceeds through the following scripts:
 
@@ -164,12 +164,12 @@ The downstream analysis begins with at least one selected dataset matrix and pro
     -Merges filtered results into edge lists and node attribute tables for network construction.
 ```
 
-#### Data availability
+## Data availability
 
 Raw data are available from:
 [repository / accession / DOI]
 
-#### Software requirements
+## Software requirements
 This workflow was tested with:
 
 R 4.3.2
@@ -180,11 +180,11 @@ Snakemake 8.0
 
 BLAST 2.14
 
-#### Additional dependencies and package versions are listed in:
+## Additional dependencies and package versions are listed in:
 
 env/environment.yml
 
-#### External tools used in the full workflow may include:
+## External tools used in the full workflow may include:
 
 MuDoGeR [DOI: 10.1111/1755-0998.13904](10.1111/1755-0998.13904)
 
@@ -202,17 +202,17 @@ Cytoscape [DOI: 10.1007/978-1-60761-987-1_18](10.1007/978-1-60761-987-1_18)
 
 Equivalent tools may be substituted if they generate compatible outputs.
 
-#### Setup
+## Setup
 Conda
 conda env create -f env/environment.yml
 conda activate manuscript-workflow
 
-#### License
+## License
 
 Code is released under the MIT License.
 Data are released under CC-BY 4.0 unless otherwise stated.
 
-#### Contact
+## Contact
 
 For questions about the workflow, open a GitHub issue or contact:
 
