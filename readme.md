@@ -191,6 +191,7 @@ PROKKA [DOI: 10.1093/bioinformatics/btu153]
 CarveMe [DOI: 10.1093/nar/gky537]
 memote [DOI: 10.1038/s41587-020-0446-y]
 Cytoscape [DOI: 10.1007/978-1-60761-987-1_18]
+[Wicquart, J., Gudka, M., Obura, D., Logan, M., Staub, F., Souter, D., Planes, S. (2022). A workflow to integrate ecological monitoring data from different sources. *Ecological Informatics*, 68.]
 
 Equivalent tools may be substituted if they generate compatible outputs.
 
