@@ -1,8 +1,8 @@
-# Repository for: [Manuscript Title]
+# Repository for: [Workflow for defining metabolic niches from metagenomic data]
 
 This repository contains the code, data pointers, and workflow used to reproduce the analyses and figures for:
 
-**Author A, Author B, Author C. Year: 2026.** *Full manuscript title*. **Ecological Informatics.** DOI: [add DOI]
+**Faith I. Oni, Ulisses N. Rocha Year: 2026.** *Genome-Resolved Insights into Microbial Metabolic Niches in a Long-Term Sulfate-Reducing, Benzene-Degrading Community*. **Ecological Informatics.** DOI: [add DOI]
 
 ---
 
@@ -165,6 +165,7 @@ The downstream analysis begins with at least one selected dataset matrix and pro
 ```
 
 #### Data availability
+
 Raw data are available from:
 [repository / accession / DOI]
 
@@ -197,7 +198,6 @@ CarveMe [DOI: 10.1093/nar/gky537](10.1093/nar/gky537)
 
 memote [DOI: 10.1038/s41587-020-0446-y](10.1038/s41587-020-0446-y)
 
-
 Cytoscape [DOI: 10.1007/978-1-60761-987-1_18](10.1007/978-1-60761-987-1_18)
 
 Equivalent tools may be substituted if they generate compatible outputs.
@@ -216,7 +216,7 @@ Data are released under CC-BY 4.0 unless otherwise stated.
 
 For questions about the workflow, open a GitHub issue or contact:
 
-Name – email@domain
+Name – faith.oni@ufz.de
 
 
 
