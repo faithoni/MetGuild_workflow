@@ -1,10 +1,10 @@
-#**Repository for: [Manuscript Title]**
+# Repository for: [Manuscript Title]
 
-This repository contains the code, workflow, and data pointers used to reproduce the analyses and figures for:
+This repository contains the code, data pointers, and workflow used to reproduce the analyses and figures for:
 
-Author A, Author B, Author C. Year. Full manuscript title. Journal. DOI
+Author A, Author B, Author C. Year. *Full manuscript title*. Journal. DOI
 
-Abstract
+## Abstract
 
 Metabolic niche partitioning links genome-encoded functions to community assembly and ecological roles, yet delineating these niches directly from genome-centric metagenomes remains limited by the lack of standardized workflows. Here, we present a semi-automated, genome-centric framework for defining metabolic niches in microbial consortia and demonstrate its application in a model sulfate-reducing, benzene-degrading enrichment culture.
 
