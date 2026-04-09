@@ -182,16 +182,13 @@ env/environment.yml
 
 #### External tools used in the full workflow may include:
 
--MuDoGeR [DOI: 10.1111/1755-0998.13904]
-
--standena [DOI: 10.1093/bioadv/vbad069]
-
--METABOLIC [DOI: 10.1186/s40168-021-01213-8](10.1186/s40168-021-01213-8)
-PROKKA [DOI: 10.1093/bioinformatics/btu153]
-CarveMe [DOI: 10.1093/nar/gky537]
-memote [DOI: 10.1038/s41587-020-0446-y]
-Cytoscape [DOI: 10.1007/978-1-60761-987-1_18]
-[Wicquart, J., Gudka, M., Obura, D., Logan, M., Staub, F., Souter, D., Planes, S. (2022). A workflow to integrate ecological monitoring data from different sources. *Ecological Informatics*, 68.]
+MuDoGeR [DOI: 10.1111/1755-0998.13904](10.1111/1755-0998.13904)
+Standena [DOI: 10.1093/bioadv/vbad069](10.1093/bioadv/vbad069)
+METABOLIC [DOI: 10.1186/s40168-021-01213-8](10.1186/s40168-021-01213-8)
+PROKKA [DOI: 10.1093/bioinformatics/btu153](10.1093/bioinformatics/btu153)
+CarveMe [DOI: 10.1093/nar/gky537](10.1093/nar/gky537)
+memote [DOI: 10.1038/s41587-020-0446-y](10.1038/s41587-020-0446-y)
+Cytoscape [DOI: 10.1007/978-1-60761-987-1_18](10.1007/978-1-60761-987-1_18)
 
 Equivalent tools may be substituted if they generate compatible outputs.
 
