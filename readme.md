@@ -7,26 +7,23 @@ Author A, Author B, Author C. Year. *Full manuscript title*. Journal. DOI
 ## Abstract
 
 Metabolic niche partitioning links genome-encoded functions to community assembly and ecological roles, yet delineating these niches directly from genome-centric metagenomes remains limited by the lack of standardized workflows. Here, we present a semi-automated, genome-centric framework for defining metabolic niches in microbial consortia and demonstrate its application in a model sulfate-reducing, benzene-degrading enrichment culture.
-
 We sequenced the solid and liquid phases of the culture and reconstructed metagenome-assembled genomes (MAGs) using MuDoGeR. To capture functional diversity, we integrated annotations from multiple biological knowledge domains, including genes involved in anaerobic aromatic degradation, KEGG modules and reactions, genome-scale metabolic reconstructions, and PROKKA, resulting in multiple matrix-style datasets. MAGs were grouped by shared functional traits using K-means and hierarchical clustering, followed by ANOVA and chi-square statistical filtering, depending on dataset type. Spearman correlation further refined trait associations and revealed functional co-occurrence patterns, which were visualized as undirected, weighted networks in Cytoscape. Network topology was then used to identify functional hubs and organize them into metabolic niches guided by biochemical pathway knowledge.
-
 We recovered 127 MAGs (120 Bacteria, 7 Archaea) and dereplicated them into 52 species-level operational taxonomic units. We identified XX distinct functional network hubs, which were resolved into XX metabolic niches, including aromatic compound degradation and carbon fixation niches. While most MAGs were linked to multiple niches, suggesting functional redundancy, a few performed bottleneck roles such as acetogenesis.
-
 This workflow provides a systematic, scalable approach to defining metabolic niches from metagenomic data and to illuminating microbial cooperation, niche overlap, and key functional contributors within complex microbial ecosystems.
 
-Overview
+## Overview
 
 This repository provides an end-to-end workflow for defining metabolic niches from genome-centric metagenomic data. The workflow begins with raw reads or genome FASTA files and proceeds through genome recovery, functional annotation, dataset generation, clustering, statistical testing, correlation analysis, and network construction.
 
-The framework is modular. Users may generate one or more functional/metabolic datasets depending on their study design and available data. At least one dataset matrix is required for downstream clustering, statistics, and network analysis.
+The framework is modular. Users may generate one or more functional potential datasets depending on their study design and available data. At least one dataset matrix is required for downstream clustering, statistics, and network analysis.
 
-Workflow summary
+## Workflow summary
 
 The workflow consists of three phases:
 
-1. Genome recovery and dataset generation
+ ## 1. Genome recovery and dataset generation
 
-Genome FASTA files are obtained either from MuDoGeR or from any alternative MAG recovery workflow. These genomes are then functionally annotated using one or more complementary approaches, including targeted pathway/gene detection, KEGG module profiling, genome-scale metabolic reconstruction, and whole-genome annotation. These steps produce one or more matrix-style datasets describing the functional potential of each genome.
+Genome FASTA files are obtained either from using the Multi-domain Genome Recovery tool- MuDoGeR (DOI: 10.1111/1755-0998.13904) or from any alternative MAG recovery tool. These genomes are then functionally annotated using one or more complementary approaches, including targeted pathway/gene detection, KEGG module profiling, genome-scale metabolic reconstruction, and whole-genome annotation. These steps produce one or more matrix-style datasets describing the functional potential of each genome.
 
 2. Clustering, statistics, and correlation analysis
 
