@@ -143,58 +143,40 @@ Downstream analysis scripts
 
 The downstream analysis begins with at least one selected dataset matrix and proceeds through the following scripts:
 
-01_removing_zero_columns_K_Optimization.py
-
-Cleans the dataset and identifies candidate K values.
-
-02_kmeans_mds_clustering.py
-
-Performs K-means clustering and multidimensional scaling.
-
-03_hierarchical_clustering.py
-
-Performs hierarchical clustering.
-
-04_ANOVA_testing.py
-
-Used for proportion/completion datasets.
-
-04_chi-square_testing.py
-
-Used for binary datasets.
-
-05_spearman_feature_vs_feature_correlation.py
-
-Computes correlations among features.
-
-06_spearman_feature_vs_cluster_correlation.py
-
-Computes correlations between features and cluster groups.
-
-07_spearman_cluster_vs_cluster_correlation.py
-
-Computes correlations among clustering outputs.
-
-08_merge_filtered_files.py
-
-Merges filtered results into edge lists and node attribute tables for network construction.
-
-Typical workflow execution order
-Dataset generation
+```text
+├── 01_removing_zero_columns_K_Optimization.py
+    -Cleans the dataset and identifies candidate K values.
+├── 02_kmeans_mds_clustering.py
+    -Performs K-means clustering and multidimensional scaling.
+├── 03_hierarchical_clustering.py
+    -Performs hierarchical clustering.
+├── 04_ANOVA_testing.py
+    -Used for proportion/completion datasets.
+├── 04_chi-square_testing.py
+    -Used for binary datasets.
+├── 05_spearman_feature_vs_feature_correlation.py
+    -Computes correlations among features.
+├── 06_spearman_feature_vs_cluster_correlation.py
+    -Computes correlations between features and cluster groups.
+├── 07_spearman_cluster_vs_cluster_correlation.py
+    -Computes correlations among clustering outputs.
+├── 08_merge_filtered_files.py
+    -Merges filtered results into edge lists and node attribute tables for network construction.
+```
+## Typical workflow execution order
+#### Dataset generation
 
 MAG recovery -> targeted annotation -> pathway completion calculation -> KEGG module detection -> KEGG module completion calculation -> PROKKA annotation -> filtering of hypothetical proteins -> CarveMe reconstruction -> memote quality assessment
 
-Downstream analysis
+#### Downstream analysis
 
 Cleaning and K optimization -> K-means + MDS clustering -> hierarchical clustering -> ANOVA or chi-square testing -> correlation analyses -> network construction
 
-Data availability
-
+#### Data availability
 Raw data are available from:
-
 [repository / accession / DOI]
-Software requirements
 
+#### Software requirements
 This workflow was tested with:
 
 R 4.3.2
@@ -202,11 +184,11 @@ Python 3.11
 Snakemake 8.0
 BLAST 2.14
 
-Additional dependencies and package versions are listed in:
+#### Additional dependencies and package versions are listed in:
 
 env/environment.yml
 
-External tools used in the full workflow may include:
+#### External tools used in the full workflow may include:
 
 MuDoGeR
 standena
@@ -218,17 +200,17 @@ Cytoscape
 
 Equivalent tools may be substituted if they generate compatible outputs.
 
-Setup
+#### Setup
 Conda
 conda env create -f env/environment.yml
 conda activate manuscript-workflow
 
-License
+#### License
 
 Code is released under the MIT License.
 Data are released under CC-BY 4.0 unless otherwise stated.
 
-Contact
+#### Contact
 
 For questions about the workflow, open a GitHub issue or contact:
 
