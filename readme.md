@@ -163,14 +163,6 @@ The downstream analysis begins with at least one selected dataset matrix and pro
 ├── 08_merge_filtered_files.py
     -Merges filtered results into edge lists and node attribute tables for network construction.
 ```
-## Typical workflow execution order
-#### Dataset generation
-
-MAG recovery -> targeted annotation -> pathway completion calculation -> KEGG module detection -> KEGG module completion calculation -> PROKKA annotation -> filtering of hypothetical proteins -> CarveMe reconstruction -> memote quality assessment
-
-#### Downstream analysis
-
-Cleaning and K optimization -> K-means + MDS clustering -> hierarchical clustering -> ANOVA or chi-square testing -> correlation analyses -> network construction
 
 #### Data availability
 Raw data are available from:
@@ -190,7 +182,7 @@ env/environment.yml
 
 #### External tools used in the full workflow may include:
 
-MuDoGeR
+MuDoGeR (#DOI: 10.1111/1755-0998.13904#)
 standena
 METABOLIC
 PROKKA
