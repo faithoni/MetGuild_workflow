@@ -2,7 +2,25 @@
 
 This repository contains the code, data pointers, and workflow used to reproduce the analyses and figures for:
 
-Author A, Author B, Author C. Year. *Full manuscript title*. Journal. DOI
+Author A, Author B, Author C. Year: 2026. *Full manuscript title*. Journal:Ecological Informatics. DOI:
+
+
+## Table of contents
+
+- [Abstract](#abstract)
+- [Overview](#overview)
+- [Workflow at a glance](#workflow-at-a-glance)
+- [Datasets generated](#datasets-generated)
+- [Repository structure](#repository-structure)
+- [Inputs, intermediate files, and outputs](#inputs-intermediate-files-and-outputs)
+- [How to run](#how-to-run)
+- [Expected outputs](#expected-outputs)
+- [Reproducibility](#reproducibility)
+- [Data availability](#data-availability)
+- [Software requirements](#software-requirements)
+- [Setup](#setup)
+- [License](#license)
+- [Contact](#contact)
 
 ## Abstract
 
@@ -25,28 +43,56 @@ The workflow consists of three phases:
 
 Genome FASTA files are obtained either from using the Multi-domain Genome Recovery tool- MuDoGeR (DOI: 10.1111/1755-0998.13904) or from any alternative MAG recovery tool. These genomes are then functionally annotated using one or more complementary approaches, including targeted pathway/gene detection, KEGG module profiling, genome-scale metabolic reconstruction, and whole-genome annotation. These steps produce one or more matrix-style datasets describing the functional potential of each genome.
 
-2. Clustering, statistics, and correlation analysis
+#### 2. Clustering, statistical filtering, and correlation analyses
 
-Each selected dataset is cleaned and evaluated for cluster number optimization. Genomes are then grouped using K-means + MDS and hierarchical clustering. Statistical testing is applied according to dataset type, with chi-square used for binary datasets and ANOVA used for proportional datasets. Feature-feature, feature-cluster, and cluster-cluster correlations are then calculated.
+Each selected dataset is cleaned and evaluated for cluster number optimization (4 methods used- details in manuscript). Genomes are then grouped using K-means + MDS and hierarchical clustering. Statistical testing is applied according to dataset type, with chi-square used for binary datasets and ANOVA used for proportional datasets. Feature-feature, feature-cluster, and cluster-cluster correlations are then calculated.
 
-3. Network construction
+#### 3. Network construction
 
 Filtered correlation outputs are merged into edge lists and node attribute tables for network construction in Cytoscape. These networks are used to identify functional hubs and support metabolic niche interpretation.
 
-Datasets generated in this workflow
+#### A critical workflow design step
+
+One of the most important steps in this workflow is the **selection of genes, pathways, or metabolic functions** used to generate at least one functional potential dataset.
+
+This step is not simply a technical preprocessing choice; it is a **biologically defining step** that strongly shapes the interpretation of downstream clustering, statistical testing, correlation analyses, and network construction. The quality and relevance of the final metabolic niche assignments depend heavily on how well the selected features represent the metabolic processes that are likely to occur in the community under study.
+
+Selection of genes and pathways should therefore be guided by:
+
+- the **community process being investigated**
+- **intensive literature review**
+- a **comprehensive understanding of the expected metabolic processes** within the system
+- prior knowledge of relevant taxa, substrates, intermediates, and environmental conditions
+
+For example, in a community enriched for anaerobic benzene degradation, the selected feature set should emphasize pathways and genes linked to anaerobic aromatic compound activation and degradation, sulfate reduction, hydrogen metabolism, acetate turnover, syntrophic interactions, carbon fixation, and other functions that are biologically plausible in that ecosystem.
+
+Because this workflow is modular, users may generate multiple functional potential datasets using different annotation strategies. However, at least one dataset should be built around a **carefully justified feature set** that is biologically relevant to the community process of interest.
+
+In practice, this means that before running the downstream analysis steps, the user should define:
+
+1. the **ecological or metabolic process of interest**
+2. the **key pathways expected to contribute to that process**
+3. the **genes, reactions, or modules that best represent those pathways**
+4. the **annotation strategy** that will be used to detect them
+
+This knowledge-guided feature selection step is essential for ensuring that the resulting datasets are informative, interpretable, and appropriate for defining metabolic niches.
+
+## Datasets generated in this workflow
 
 Depending on the selected annotation strategy, the workflow can generate one or more of the following datasets:
 
-Targeted gene/pathway presence-absence matrix
-Targeted pathway completion/proportion matrix
-KEGG module presence-absence matrix
-KEGG module completion/proportion matrix
-Genome reconstruction versus KEGG module matrix
-GEM quality assessment table
+1. **Targeted gene/pathway presence-absence matrix**  
+2. **Targeted pathway completion/proportion matrix**  
+3. **KEGG module presence-absence matrix**  
+4. **KEGG module completion/proportion matrix**  
+5. **Genome reconstruction versus KEGG module matrix**  
+6. **PROKKA-derived gene presence-absence matrix (excluding hypothetical proteins)**  
+
+The sixth dataset is generated from the full set of genes annotated by PROKKA after removal of genes annotated as hypothetical proteins. This provides a broader gene-level functional potential matrix that can be used alongside the targeted and KEGG-based datasets in downstream analyses.
 
 Users may analyze one dataset or several datasets independently.
 
-Inputs
+## Inputs
 
 The workflow accepts either:
 
@@ -62,101 +108,6 @@ user-defined configuration files
 
 The minimum requirement for downstream analysis is at least one dataset matrix generated from the genomes.
 
-Repository structure
-# [Manuscript Title]
-
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![R](https://img.shields.io/badge/R-4.3.2-blue)
-![Snakemake](https://img.shields.io/badge/Snakemake-8.0-brightgreen)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-
-Repository for the code, workflow, and data pointers used to reproduce the analyses and figures for:
-
-**Author A, Author B, Author C. Year.** *Full manuscript title*. Journal. DOI
-
----
-
-## Table of contents
-
-- [Abstract](#abstract)
-- [Overview](#overview)
-- [Workflow at a glance](#workflow-at-a-glance)
-- [Datasets generated](#datasets-generated)
-- [Repository structure](#repository-structure)
-- [Inputs, intermediate files, and outputs](#inputs-intermediate-files-and-outputs)
-- [How to run](#how-to-run)
-- [Expected outputs](#expected-outputs)
-- [Reproducibility](#reproducibility)
-- [Data availability](#data-availability)
-- [Software requirements](#software-requirements)
-- [Setup](#setup)
-- [License](#license)
-- [Contact](#contact)
-
----
-
-## Abstract
-
-Metabolic niche partitioning links genome-encoded functions to community assembly and ecological roles, yet delineating these niches directly from genome-centric metagenomes remains limited by the lack of standardized workflows. Here, we present a semi-automated, genome-centric framework for defining metabolic niches in microbial consortia and demonstrate its application in a model sulfate-reducing, benzene-degrading enrichment culture.
-
-We sequenced the solid and liquid phases of the culture and reconstructed metagenome-assembled genomes (MAGs) using MuDoGeR. To capture functional diversity, we integrated annotations from multiple biological knowledge domains, including genes involved in anaerobic aromatic degradation, KEGG modules and reactions, genome-scale metabolic reconstructions, and PROKKA, resulting in multiple matrix-style datasets. MAGs were grouped by shared functional traits using K-means and hierarchical clustering, followed by ANOVA and chi-square statistical filtering, depending on dataset type. Spearman correlation further refined trait associations and revealed functional co-occurrence patterns, which were visualized as undirected, weighted networks in Cytoscape. Network topology was then used to identify functional hubs and organize them into metabolic niches guided by biochemical pathway knowledge.
-
-We recovered 127 MAGs (120 Bacteria, 7 Archaea) and dereplicated them into 52 species-level operational taxonomic units. We identified XX distinct functional network hubs, which were resolved into XX metabolic niches, including aromatic compound degradation and carbon fixation niches. While most MAGs were linked to multiple niches, suggesting functional redundancy, a few performed bottleneck roles such as acetogenesis.
-
-This workflow provides a systematic, scalable approach to defining metabolic niches from metagenomic data and to illuminating microbial cooperation, niche overlap, and key functional contributors within complex microbial ecosystems.
-
----
-
-## Overview
-
-This repository contains an end-to-end workflow for defining metabolic niches from genome-centric metagenomic data.
-
-The workflow begins with either:
-- raw metagenomic reads, or
-- genome FASTA files
-
-It then proceeds through:
-- genome recovery
-- functional annotation
-- dataset generation
-- clustering
-- statistical testing
-- correlation analysis
-- network construction
-
-The framework is modular. Users may generate one or more dataset matrices depending on their goals. At least one matrix is required for downstream analysis.
-
----
-
-## Workflow at a glance
-
-The workflow has three phases.
-
-### 1. Genome recovery and dataset generation
-Genome FASTA files are obtained from MuDoGeR or another MAG recovery workflow. These genomes are then annotated using one or more approaches, including targeted pathway/gene detection, KEGG module profiling, genome-scale metabolic reconstruction, and whole-genome annotation.
-
-### 2. Clustering, statistics, and correlation analysis
-Each selected dataset matrix is cleaned, evaluated for cluster number optimization, clustered using K-means + MDS and hierarchical clustering, and analyzed using ANOVA or chi-square depending on data type. Feature-feature, feature-cluster, and cluster-cluster correlations are then computed.
-
-### 3. Network construction
-Filtered outputs are merged into edge lists and node attribute tables for network construction in Cytoscape.
-
----
-
-## Datasets generated
-
-Depending on the selected annotation strategy, the workflow can generate one or more of the following:
-
-1. **Targeted gene/pathway presence-absence matrix**  
-2. **Targeted pathway completion/proportion matrix**  
-3. **KEGG module presence-absence matrix**  
-4. **KEGG module completion/proportion matrix**  
-5. **Genome reconstruction versus KEGG module matrix**  
-6. **GEM quality assessment table**
-
-These datasets can be analyzed independently or in parallel.
-
----
 
 ## Repository structure
 .
@@ -169,7 +120,7 @@ These datasets can be analyzed independently or in parallel.
 │   ├── metadata/
 │   ├── pathway_definitions/
 │   ├── kegg_definitions/
-│   └── external_data_pointers/
+
 ├── scripts/
 │   ├── 00_mag_recovery/
 │   ├── 01_dataset_generation/
@@ -312,17 +263,17 @@ Cytoscape
 
 Equivalent tools may be substituted if they generate compatible outputs.
 
-Setup
+### Setup
 Conda
 conda env create -f env/environment.yml
 conda activate manuscript-workflow
 
-License
+### License
 
 Code is released under the MIT License.
 Data are released under CC-BY 4.0 unless otherwise stated.
 
-Contact
+### Contact
 
 For questions about the workflow, open a GitHub issue or contact:
 
