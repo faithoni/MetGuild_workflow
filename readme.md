@@ -108,8 +108,8 @@ user-defined configuration files
 
 The minimum requirement for downstream analysis is at least one dataset matrix generated from the genomes.
 
-
 ## Repository structure
+
 .
 ├── README.md
 ├── config/
@@ -119,18 +119,17 @@ The minimum requirement for downstream analysis is at least one dataset matrix g
 │   ├── genomes/
 │   ├── metadata/
 │   ├── pathway_definitions/
-│   ├── kegg_definitions/
-
+│   └── kegg_definitions/
 ├── scripts/
-│   ├── 01_removing_zero_columns_K_Optimization.py/
-│   ├── 02_kmeans_mds_clustering.py/
-│   ├── 03_hierarchical_clustering.py/
-│   ├── 04_ANOVA_testing.py/ ├── 04_chi-square_testing.py/
-│   ├── 05_spearman_feature_vs_feature_correlation.py/
-│   ├── 06_spearman_feature_vs_cluster_correlation.py/
-│   ├── 07_spearman_cluster_vs_cluster_correlation.py/
-│   └── 08_merge_filtered_files.py/
-  
+│   ├── 01_removing_zero_columns_K_Optimization.py
+│   ├── 02_kmeans_mds_clustering.py
+│   ├── 03_hierarchical_clustering.py
+│   ├── 04_ANOVA_testing.py
+│   ├── 04_chi-square_testing.py
+│   ├── 05_spearman_feature_vs_feature_correlation.py
+│   ├── 06_spearman_feature_vs_cluster_correlation.py
+│   ├── 07_spearman_cluster_vs_cluster_correlation.py
+│   └── 08_merge_filtered_files.py
 ├── outputs/
 │   ├── datasets/
 │   ├── clustering_results/
@@ -143,7 +142,8 @@ The minimum requirement for downstream analysis is at least one dataset matrix g
 ├── manuscript/
 └── LICENSE
 
-Downstream analysis scripts
+
+#### Downstream analysis scripts
 
 The downstream analysis begins with at least one selected dataset matrix and proceeds through the following scripts:
 
