@@ -1,4 +1,4 @@
-##Repository for: [Manuscript Title]
+##**Repository for: [Manuscript Title]**
 
 This repository contains the code, workflow, and data pointers used to reproduce the analyses and figures for:
 
