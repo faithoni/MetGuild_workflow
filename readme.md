@@ -122,10 +122,16 @@ The minimum requirement for downstream analysis is at least one dataset matrix g
 │   ├── kegg_definitions/
 
 ├── scripts/
-│   ├── 00_mag_recovery/
-│   ├── 01_dataset_generation/
-│   ├── 02_downstream_analysis/
-│   └── 03_network_visualization/
+│   ├── 01_removing_zero_columns_K_Optimization.py/
+│   ├── 02_kmeans_mds_clustering.py/
+│   ├── 03_hierarchical_clustering.py/
+│   ├── 04_ANOVA_testing.py/ ├── 04_chi-square_testing.py/
+│   ├── 05_spearman_feature_vs_feature_correlation.py/
+│   ├── 06_spearman_feature_vs_cluster_correlation.py/
+│   ├── 07_spearman_cluster_vs_cluster_correlation.py/
+│   └── 08_merge_filtered_files.py/
+  
+
 ├── workflow/
 │   ├── manifests/
 │   ├── notebooks/
