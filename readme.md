@@ -15,7 +15,6 @@ This repository contains the code, data pointers, and workflow used to reproduce
 - [Datasets generated in this workflow](#datasets-generated-in-this-workflow)
 - [Repository structure](#repository-structure)
 - [Downstream analysis scripts](#downstream-analysis-scripts)
-- [Typical workflow execution order](#typical-workflow-execution-order)
 - [Data availability](#data-availability)
 - [Software requirements](#software-requirements)
 - [Setup](#setup)
