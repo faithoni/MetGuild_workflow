@@ -34,15 +34,15 @@ if not input_file:
 if not os.path.exists(input_file):
     raise FileNotFoundError(f"File not found: {input_file}")
 
-max_k_str = input("Enter max_k (tests k=2..max_k-1) [default 15]: ").strip()
-max_k = 15 if max_k_str == "" else int(max_k_str)
+
+max_k = 15 
 if max_k < 3:
     raise ValueError("max_k must be at least 3 (because clustering is tested for k=2..max_k-1).")
 
 # -----------------------------
 # PART 1: Cleaning (drop all-zero + all-NaN columns, keep Genomes)
 # -----------------------------
-df = pd.read_csv(input_file, encoding="latin1")
+df = pd.read_csv(input_file, sep="\t")
 logging.info(f"Columns in the dataset: {df.columns.tolist()}")
 
 if "Genomes" not in df.columns:
