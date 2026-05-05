@@ -166,6 +166,7 @@ Build the container:
 ```bash
 apptainer build mag_network_analysis.sif container/Singularity.def
 
+```
 
 ## External tools used in the full workflow may include:
 
