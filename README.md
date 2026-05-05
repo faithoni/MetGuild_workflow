@@ -98,7 +98,6 @@ Users may analyze one dataset or several datasets independently.
 .
 ├── README.md
 ├── config/
-├── env/
 ├── inputs/
 │   ├── raw_reads/
 │   ├── genomes/
@@ -122,9 +121,7 @@ Users may analyze one dataset or several datasets independently.
 │   ├── correlation_results/
 │   ├── network_files/
 │   └── summary_tables/
-├── figures/
-├── tables/
-├── manuscript/
+├── figures & tables/
 └── LICENSE
 ```
 
@@ -190,10 +187,7 @@ Cytoscape [DOI: 10.1007/978-1-60761-987-1_18](10.1007/978-1-60761-987-1_18)
 
 Equivalent tools may be substituted if they generate compatible outputs.
 
-## Setup
-Conda
-conda env create -f env/environment.yml
-conda activate manuscript-workflow
+
 
 ## License
 
