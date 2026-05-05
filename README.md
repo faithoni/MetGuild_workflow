@@ -161,11 +161,15 @@ Raw data are available from:
 
 ## Running with Apptainer/Singularity
 
-Build the container:
-
 ```bash
-apptainer build mag_network_analysis.sif container/Singularity.def
+Build the container:
+apptainer build niche_workflow.sif niche_workflow.def
 
+test the container:
+apptainer test niche_workflow.sif
+
+execute:
+apptainer exec niche_workflow.sif python --version
 ```
 
 ## External tools used in the full workflow may include:
