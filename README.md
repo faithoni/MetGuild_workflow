@@ -8,7 +8,6 @@ This repository contains the code, data pointers, and workflow used to reproduce
 
 ## Table of contents
 
-- [Abstract](#abstract)
 - [Overview](#overview)
 - [Workflow summary](#workflow-summary)
 - [A critical workflow design step](#a-critical-workflow-design-step)
@@ -21,14 +20,6 @@ This repository contains the code, data pointers, and workflow used to reproduce
 - [License](#license)
 - [Contact](#contact)
 
----
-
-## Abstract
-
-Metabolic niche partitioning links genome-encoded functions to community assembly and ecological roles, yet delineating these niches directly from genome-centric metagenomes remains limited by the lack of standardized workflows. Here, we present a semi-automated, genome-centric framework for defining metabolic niches in microbial consortia and demonstrate its application in a model sulfate-reducing, benzene-degrading enrichment culture.
-We sequenced the solid and liquid phases of the culture and reconstructed metagenome-assembled genomes (MAGs) using MuDoGeR. To capture functional diversity, we integrated annotations from multiple biological knowledge domains, including genes involved in anaerobic aromatic degradation, KEGG modules and reactions, genome-scale metabolic reconstructions, and PROKKA, resulting in multiple matrix-style datasets. MAGs were grouped by shared functional traits using K-means and hierarchical clustering, followed by ANOVA and chi-square statistical filtering, depending on dataset type. Spearman correlation further refined trait associations and revealed functional co-occurrence patterns, which were visualized as undirected, weighted networks in Cytoscape. Network topology was then used to identify functional hubs and organize them into metabolic niches guided by biochemical pathway knowledge.
-We recovered 127 MAGs (120 Bacteria, 7 Archaea) and dereplicated them into 52 species-level operational taxonomic units. We identified XX distinct functional network hubs, which were resolved into XX metabolic niches, including aromatic compound degradation and carbon fixation niches. While most MAGs were linked to multiple niches, suggesting functional redundancy, a few performed bottleneck roles such as acetogenesis.
-This workflow provides a systematic, scalable approach to defining metabolic niches from metagenomic data and to illuminating microbial cooperation, niche overlap, and key functional contributors within complex microbial ecosystems.
 
 ---
 
@@ -168,20 +159,13 @@ The downstream analysis begins with at least one selected dataset matrix and pro
 Raw data are available from:
 [repository / accession / DOI]
 
-## Software requirements
-This workflow was tested with:
+## Running with Apptainer/Singularity
 
-R 4.3.2
+Build the container:
 
-Python 3.11
+```bash
+apptainer build mag_network_analysis.sif container/Singularity.def
 
-Snakemake 8.0
-
-BLAST 2.14
-
-## Additional dependencies and package versions are listed in:
-
-env/environment.yml
 
 ## External tools used in the full workflow may include:
 
