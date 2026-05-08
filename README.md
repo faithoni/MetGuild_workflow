@@ -95,34 +95,6 @@ Genomes
 This column is used as the genome/sample identifier throughout the workflow.
 The remaining columns should represent genes, pathways, modules, reactions, or other functional features.
 
-##  Running the workflow with conda
-
-```bash
-## Create the conda environment:
-```
-```bash
-conda env create -f environment.yml
-```
-```bash
-Activate the environment:
-
-conda activate niches_workflow
-```
-```bash
-Make the workflow script executable:
-chmod +x run_niches_workflow.sh
-```
-Run the workflow:
-```bash
-bash run_niches_workflow.sh path/to/your_input_file.tsv
-```
-```bash
-bash run_niches_workflow.sh data/my_dataset.tsv
-```
-```bash
-For example:
-bash run_niches_workflow.sh data/01_DSK_DB.tsv
-```
 ## Running with Apptainer/ Singularity
 
 ```bash
