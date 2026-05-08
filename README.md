@@ -1,4 +1,4 @@
-# Repository for: [Workflow for defining metabolic niches from metagenomic data]
+# Repository for: Workflow for defining metabolic niches from metagenomic data
 
 This repository contains the code, data pointers, and workflow used to reproduce the analyses and figures for:
 
