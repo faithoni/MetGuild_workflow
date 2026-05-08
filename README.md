@@ -105,14 +105,25 @@ apptainer exec niche_workflow.sif python --version
 
 ##  Enironment: Conda
 ```bash
+## Installation
+
+Create the conda environment:
 
 conda env create -f environment.yml
+
+Activate the environment:
 
 conda activate niches_workflow
 ```
 
 ## Commands
+After activating the conda environment, run the workflow by providing the path to your input dataset:
+
 ```bash
+bash run_niches_workflow.sh path/to/your_input_file.tsv
+bash run_niches_workflow.sh data/my_dataset.tsv
+
+e.g.
 bash run_niches_workflow.sh data/01_DSK_DB.tsv
 ```
 
