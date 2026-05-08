@@ -1,0 +1,15 @@
+name: niches_workflow
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy
+  - matplotlib
+  - scikit-learn
+  - scipy
+  - seaborn
+  - plotly
+  - pip
