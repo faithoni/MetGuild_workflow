@@ -56,8 +56,8 @@ Run the workflow with your input dataset:
 ```bash
 bash run_niches_workflow.sh data/your_input_file.tsv
 ```
-```bash
 For example:
+```bash
 bash run_niches_workflow.sh data/01_DSK_DB.tsv
 ```
 
