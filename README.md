@@ -134,18 +134,23 @@ Code is released under the MIT License.
 Data are released under CC-BY 4.0 unless otherwise stated.
 
 ## How to cite this workflow
+```bash
+```
 
 ## Benchmarking
+```bash
+```
 
 ## Acknowledgements/ credits
-
+```bash
+```
 
 ## Contact
-
+```bash
 For questions about the workflow, open a GitHub issue or contact:
 
 Name – faith.oni@ufz.de
-
+```
 
 
 
