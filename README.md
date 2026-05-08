@@ -86,6 +86,7 @@ Before running the workflow, the repository should look like this:
 
 ```text
 niches_workflow/
+├── niche_workflow.sif
 ├── run_niches_workflow.sh
 ├── environment.yml
 ├── scripts/
@@ -114,7 +115,7 @@ This column is used as the genome/sample identifier throughout the workflow.
 
 
 
-## Running with Apptainer/Singularity
+## Running with Apptainer/ Singularity
 
 ```bash
 Build the container:
@@ -125,6 +126,11 @@ apptainer test niche_workflow.sif
 
 execute:
 apptainer exec niche_workflow.sif python --version
+
+run:
+apptainer run --bind "$PWD:/project" niche_workflow.sif data/your_input_file.tsv
+Example:
+apptainer run --bind "$PWD:/project" niche_workflow.sif data/01_DSK_DB.tsv
 ```
 
 ##  Installation
