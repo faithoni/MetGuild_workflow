@@ -1,7 +1,7 @@
 # Repository for: Workflow for defining metabolic niches from metagenomic data
 ---
 ## Description
-This repository contains the code, data pointers, and workflow used to reproduce the analyses and figures for:
+This repository contains the scripts, data pointers, and workflow used to reproduce the analyses and results for:
 
 **Faith I. Oni, Ulisses N. Rocha Year: 2026.** *Genome-Resolved Insights into Microbial Metabolic Niches in a Long-Term Sulfate-Reducing, Benzene-Degrading Community*. **Ecological Informatics.** DOI: [add DOI]
 
@@ -41,19 +41,19 @@ This repository does not perform raw read processing, genome recovery, taxonomic
 
 ## Workflow summary
 
-The workflow consists of three phases:
+The workflow consists of three modules:
 
-### 1. Genome recovery and dataset generation
+### 1. Genome-to-key functional groups
 
-Genome FASTA files are obtained either using the multi-domain genome recovery tool MuDoGeR (DOI: 10.1111/1755-0998.13904) or with any alternative MAG recovery tool. These genomes are then functionally annotated using one or more complementary approaches, including targeted pathway/gene detection, KEGG module profiling, genome-scale metabolic reconstruction, and whole-genome annotation. These steps produce one or more matrix-style datasets describing the functional potential of each genome.
+Genome-level functional annotation outputs are used to generate one or more functional potential datasets. These may include targeted pathway or gene profiles, KEGG module profiles, genome-scale metabolic reconstruction outputs, or whole-genome annotation matrices. Each dataset is formatted as a genome-by-function matrix describing the metabolic potential of each genome.
 
-### 2. Clustering, statistical filtering, and correlation analyses
+### 2. Functional potential-to-connected functional hubs
 
-Each selected dataset is cleaned and evaluated for cluster number optimization using four methods described in the manuscript. Genomes are then grouped using K-means + MDS and hierarchical clustering. Statistical testing is applied according to dataset type, with chi-square used for binary datasets and ANOVA used for proportional datasets. Feature-feature, feature-cluster, and cluster-cluster correlations are then calculated.
+Each selected dataset is filtered, cleaned, and assessed for optimal cluster structure using the approaches described in the manuscript. Genomes are then grouped into key functional groups using clustering analyses. Statistical testing is applied according to dataset type, with chi-square tests used for binary datasets and ANOVA used for proportional datasets. Correlation analyses are then performed to identify associations among functions, functional groups, and clusters.
 
-### 3. Network construction
+### 3. Functional hubs-to-ecological interpretation
 
-Filtered correlation outputs are merged into edge lists and node attribute tables for network construction in Cytoscape. These networks are used to identify functional hubs and support metabolic niche interpretation.
+Filtered correlation outputs are converted into edge lists and node attribute tables for network construction in Cytoscape. The resulting networks are used to identify connected functional hubs, examine relationships among metabolic features, and support ecological interpretation of the inferred metabolic niches.
 
 ---
 
@@ -86,14 +86,14 @@ This knowledge-guided feature selection step is essential for ensuring that the 
 
 ## Datasets generated in this workflow
 
-Depending on the selected annotation strategy, the workflow can generate one or more of the following datasets:
+Six datasets generated using the different annotation strategies described in the manuscript can be found in the folder - Example datasets:
 
-1. **Targeted gene/pathway presence-absence matrix**
-2. **Targeted pathway completion/proportion matrix**
-3. **KEGG module presence-absence matrix**
-4. **KEGG module completion/proportion matrix**
-5. **Genome reconstruction versus KEGG module matrix**
-6. **PROKKA-derived gene presence-absence matrix (excluding hypothetical proteins)**
+1. **DSK_DB: Targeted gene/pathway presence-absence matrix**
+2. **DSK_P_DB: Targeted pathway completion/proportion matrix**
+3. **MAG_KEGG_DB: KEGG module presence-absence matrix**
+4. **MAG_KEGG_P_DB: KEGG module completion/proportion matrix**
+5. **GSMR_KEGG_DB: Genome reconstruction versus KEGG module matrix**
+6. **PROKKA_DB: PROKKA-derived gene presence-absence matrix (excluding hypothetical proteins)**
 
 Users may analyze one dataset or several datasets independently.
 
