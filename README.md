@@ -116,6 +116,9 @@ apptainer test niche_workflow.sif
 execute:
 apptainer exec niche_workflow.sif python --version
 ```
+## Commands
+python 01_removing_zero_columns_K_Optimization.py
+
 
 ## External tools used in the full workflow may include:
 
