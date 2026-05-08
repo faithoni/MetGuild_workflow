@@ -113,7 +113,7 @@ conda activate niches_workflow
 
 ## Commands
 ```bash
-python 01_removing_zero_columns_K_Optimization.py
+bash run_niches_workflow.sh data/01_DSK_DB.tsv
 ```
 
 ## External tools used in the full workflow may include:
