@@ -22,26 +22,15 @@ The framework is annotation-tool agnostic and can use one or more functional pot
 This repository does not perform raw read processing, genome recovery, taxonomic classification, or primary functional annotation. Tools used for these steps are listed under 'External tools'.
 ```
 ---
+## Quick start
 
-## Workflow summary
-
-The workflow consists of three modules:
 ```bash
-### 1. Genome-to-key functional groups
-
-Genome-level functional annotation outputs are used to generate one or more functional potential datasets. These may include targeted pathway or gene profiles, KEGG module profiles, genome-scale metabolic reconstruction outputs, or whole-genome annotation matrices. Each dataset is formatted as a genome-by-function matrix describing the metabolic potential of each genome.
+conda env create -f environment.yml
+conda activate niches_workflow
+chmod +x run_niches_workflow.sh
+bash run_niches_workflow.sh data/your_input_file.tsv
 ```
-```bash
-### 2. Functional potential-to-connected functional hubs
 
-Each selected dataset is filtered, cleaned, and assessed for optimal cluster structure using the approaches described in the manuscript. Genomes are then grouped into key functional groups using clustering analyses. Statistical testing is applied according to dataset type, with chi-square tests used for binary datasets and ANOVA used for proportional datasets. Correlation analyses are then performed to identify associations among functions, functional groups, and clusters.
-```
-```bash
-### 3. Functional hubs-to-ecological interpretation
-
-Filtered correlation outputs are converted into edge lists and node attribute tables for network construction in Cytoscape. The resulting networks are used to identify connected functional hubs, examine relationships among metabolic features, and support ecological interpretation of the inferred metabolic niches.
-```
----
 
 ## A critical workflow design step
 
@@ -70,7 +59,7 @@ This knowledge-guided feature selection step is essential for ensuring that the 
 
 ---
 
-## Datasets generated in this workflow
+## Datasets generated in this project
 
 Six datasets generated using the different annotation strategies described in the manuscript can be found in the folder - Example datasets:
 ```bash
@@ -89,6 +78,41 @@ Users may analyze one dataset or several datasets independently.
 
 Raw data are available from:
 [repository / accession / DOI]
+------
+
+## Repository structure
+
+Before running the workflow, the repository should look like this:
+
+```text
+niches_workflow/
+├── run_niches_workflow.sh
+├── environment.yml
+├── scripts/
+│   ├── 01_removing_zero_columns_K_Optimization.py
+│   ├── 02_kmeans_mds_clustering.py
+│   ├── 03_hierarchical_clustering.py
+│   ├── 04_ANOVA_testing.py
+│   ├── 04_chi-square_testing.py
+│   ├── 05_spearman_feature_vs_feature_correlation.py
+│   ├── 06_spearman_feature_vs_cluster_correlation.py
+│   ├── 07_spearman_cluster_vs_cluster_correlation.py
+│   └── 08_merge_filtered_files.py
+└── data/
+    └── your_input_file.tsv
+```
+
+## Input file requirements
+
+The input file can be a .tsv or .csv file.
+
+The dataset must contain a column named:
+```bash
+Genomes
+```
+This column is used as the genome/sample identifier throughout the workflow.
+
+
 
 ## Running with Apptainer/Singularity
 
@@ -103,13 +127,12 @@ execute:
 apptainer exec niche_workflow.sif python --version
 ```
 
-##  Setup Environment: Conda
+##  Installation
+
 ```bash
-## Installation
+## Create the conda environment:
 ```
 ```bash
-Create the conda environment:
-
 conda env create -f environment.yml
 ```
 ```bash
@@ -117,9 +140,13 @@ Activate the environment:
 
 conda activate niches_workflow
 ```
+```bash
+Make the workflow script executable:
+chmod +x run_niches_workflow.sh
+```
 
-## Commands
-After activating the conda environment, run the workflow by providing the path to your input dataset:
+## Running the workflow
+After activating the conda environment, run the full workflow by providing the path to your input dataset:
 
 ```bash
 bash run_niches_workflow.sh path/to/your_input_file.tsv
@@ -128,8 +155,24 @@ bash run_niches_workflow.sh path/to/your_input_file.tsv
 bash run_niches_workflow.sh data/my_dataset.tsv
 ```
 ```bash
-e.g.
+For example:
 bash run_niches_workflow.sh data/01_DSK_DB.tsv
+```
+
+## Main output folders
+```bash
+my_dataset/
+├── manifests/
+├── 02_k_optimization/
+├── 03_04_clustering/
+├── 05_stat_analysis/
+├── 06_correlation/
+└── 07_network_construction/
+```
+### The final network files are located in:
+```bash
+my_dataset/07_network_construction/edge_lists/
+my_dataset/07_network_construction/nodes_attributes/
 ```
 
 ## External tools used in the full workflow may include:
