@@ -48,12 +48,12 @@ Create and activate the conda environment:
 conda env create -f environment.yml
 conda activate niches_workflow
 ```
-```bash
 Make the workflow script executable:
+```bash
 chmod +x run_niches_workflow.sh
 ```
-```bash
 Run the workflow with your input dataset:
+```bash
 bash run_niches_workflow.sh data/your_input_file.tsv
 ```
 ```bash
