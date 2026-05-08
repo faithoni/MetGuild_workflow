@@ -121,8 +121,11 @@ After activating the conda environment, run the workflow by providing the path t
 
 ```bash
 bash run_niches_workflow.sh path/to/your_input_file.tsv
+```
+```bash
 bash run_niches_workflow.sh data/my_dataset.tsv
-
+```
+```bash
 e.g.
 bash run_niches_workflow.sh data/01_DSK_DB.tsv
 ```
