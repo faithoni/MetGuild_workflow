@@ -234,7 +234,7 @@ Oni F.,I., .....
 ```
 ## Benchmarking
 ```bash
-Benchmarking can be performed to evaluate runtime, memory usage, reproducibility, and output stability across datasets of different sizes.
+Benchmarking was performed to evaluate runtime, memory usage, reproducibility, and output stability across datasets of different sizes.
 
 Example benchmark command:
 
