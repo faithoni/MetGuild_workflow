@@ -13,10 +13,9 @@ This repository contains the code, data pointers, and workflow used to reproduce
 - [A critical workflow design step](#a-critical-workflow-design-step)
 - [Datasets generated in this workflow](#datasets-generated-in-this-workflow)
 - [Repository structure](#repository-structure)
-- [Downstream analysis scripts](#downstream-analysis-scripts)
 - [Data availability](#data-availability)
-- [Software requirements](#software-requirements)
-- [Setup](#setup)
+- [Running with Apptainer/Singularity](#Running-with-Apptainer)
+- [External tools](#External-tools)
 - [License](#license)
 - [Contact](#contact)
 
