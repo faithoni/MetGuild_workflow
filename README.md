@@ -97,21 +97,25 @@ The remaining columns should represent genes, pathways, modules, reactions, or o
 
 ## Running with Apptainer/ Singularity
 
-```bash
 Build the container:
+```bash
 apptainer build niche_workflow.sif niche_workflow.def
-
-test the container:
+```
+Test the container:
+```bash
 apptainer test niche_workflow.sif
-
-execute:
+```
+Execute:
+```bash
 apptainer exec niche_workflow.sif python --version
-
-run:
+```
+Run:
+```bash
 apptainer run --bind "$PWD:/project" niche_workflow.sif data/your_input_file.tsv
+```
 Example:
 apptainer run --bind "$PWD:/project" niche_workflow.sif data/01_DSK_DB.tsv
-```
+
 ## Workflow steps
 ```text
 The workflow runs the following steps automatically:
