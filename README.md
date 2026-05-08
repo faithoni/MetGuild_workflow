@@ -6,7 +6,7 @@ This repository contains the code, data pointers, and workflow used to reproduce
 **Faith I. Oni, Ulisses N. Rocha Year: 2026.** *Genome-Resolved Insights into Microbial Metabolic Niches in a Long-Term Sulfate-Reducing, Benzene-Degrading Community*. **Ecological Informatics.** DOI: [add DOI]
 
 ---
-##Workflow Diagram
+## Workflow Diagram
 
 ---
 
