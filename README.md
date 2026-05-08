@@ -42,19 +42,21 @@ This repository does not perform raw read processing, genome recovery, taxonomic
 ## Workflow summary
 
 The workflow consists of three modules:
-
+```bash
 ### 1. Genome-to-key functional groups
 
 Genome-level functional annotation outputs are used to generate one or more functional potential datasets. These may include targeted pathway or gene profiles, KEGG module profiles, genome-scale metabolic reconstruction outputs, or whole-genome annotation matrices. Each dataset is formatted as a genome-by-function matrix describing the metabolic potential of each genome.
-
+```
+```bash
 ### 2. Functional potential-to-connected functional hubs
 
 Each selected dataset is filtered, cleaned, and assessed for optimal cluster structure using the approaches described in the manuscript. Genomes are then grouped into key functional groups using clustering analyses. Statistical testing is applied according to dataset type, with chi-square tests used for binary datasets and ANOVA used for proportional datasets. Correlation analyses are then performed to identify associations among functions, functional groups, and clusters.
-
+```
+```bash
 ### 3. Functional hubs-to-ecological interpretation
 
 Filtered correlation outputs are converted into edge lists and node attribute tables for network construction in Cytoscape. The resulting networks are used to identify connected functional hubs, examine relationships among metabolic features, and support ecological interpretation of the inferred metabolic niches.
-
+```
 ---
 
 ## A critical workflow design step
