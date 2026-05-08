@@ -97,40 +97,7 @@ Six datasets generated using the different annotation strategies described in th
 
 Users may analyze one dataset or several datasets independently.
 
----
-
-## Repository structure
-
-```text
-.
-├── README.md
-├── config/
-├── inputs/
-│   ├── raw_reads/
-│   ├── genomes/
-│   ├── metadata/
-│   ├── pathway_definitions/
-│   └── kegg_definitions/
-├── scripts/
-│   ├── 01_removing_zero_columns_K_Optimization.py
-│   ├── 02_kmeans_mds_clustering.py
-│   ├── 03_hierarchical_clustering.py
-│   ├── 04_ANOVA_testing.py
-│   ├── 04_chi-square_testing.py
-│   ├── 05_spearman_feature_vs_feature_correlation.py
-│   ├── 06_spearman_feature_vs_cluster_correlation.py
-│   ├── 07_spearman_cluster_vs_cluster_correlation.py
-│   └── 08_merge_filtered_files.py
-├── outputs/
-│   ├── datasets/
-│   ├── clustering_results/
-│   ├── statistical_results/
-│   ├── correlation_results/
-│   ├── network_files/
-│   └── summary_tables/
-├── figures & tables/
-└── LICENSE
-```
+----
 
 ## Data availability
 
