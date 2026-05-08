@@ -103,16 +103,19 @@ execute:
 apptainer exec niche_workflow.sif python --version
 ```
 
-##  Enironment: Conda
+##  Setup Enironment: Conda
 ```bash
 ## Installation
 
 Create the conda environment:
-
+```
+```bash
 conda env create -f environment.yml
-
+```
+```bash
 Activate the environment:
-
+```
+```bash
 conda activate niches_workflow
 ```
 
