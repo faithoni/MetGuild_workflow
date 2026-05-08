@@ -1,8 +1,12 @@
 # Repository for: Workflow for defining metabolic niches from metagenomic data
-
+---
+## Description
 This repository contains the code, data pointers, and workflow used to reproduce the analyses and figures for:
 
 **Faith I. Oni, Ulisses N. Rocha Year: 2026.** *Genome-Resolved Insights into Microbial Metabolic Niches in a Long-Term Sulfate-Reducing, Benzene-Degrading Community*. **Ecological Informatics.** DOI: [add DOI]
+
+---
+##Workflow Diagram
 
 ---
 
@@ -167,6 +171,13 @@ Equivalent tools may be substituted if they generate compatible outputs.
 
 Code is released under the MIT License.
 Data are released under CC-BY 4.0 unless otherwise stated.
+
+## How to cite this workflow
+
+## Benchmarking
+
+## Acknowledgements/ credits
+
 
 ## Contact
 
