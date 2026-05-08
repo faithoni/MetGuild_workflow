@@ -102,6 +102,13 @@ apptainer test niche_workflow.sif
 execute:
 apptainer exec niche_workflow.sif python --version
 ```
+
+##  Enironment- conda
+```bash
+
+conda env create -f environment.yml
+```
+
 ## Commands
 ```bash
 python 01_removing_zero_columns_K_Optimization.py
