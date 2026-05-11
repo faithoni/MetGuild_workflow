@@ -235,6 +235,16 @@ Oni F.,I., .....
 ## Benchmarking
 ```bash
 Benchmarking was performed to evaluate runtime, memory usage, reproducibility, and output stability across datasets of different sizes.
+Benchmarking was performed using `/usr/bin/time -v`.
+
+| Dataset | Runtime | Max memory | CPU use | Status |
+|---|---:|---:|---:|---|
+| `01_DSK_DB.tsv` | 19.07 s | 221 MB | 95% | Completed |
+| `02_DSK_P_DB.tsv` | 14.42 s | 218 MB | 93% | Completed |
+| `03_MAGs_KEGG_DB.tsv` | 19.78 s | 217 MB | 97% | Completed |
+| `04_MAGs_KEGG_P_DB.tsv` | 40.07 s | 229 MB | 84% | Completed |
+| `05_GSMR-KEGG_DB.tsv` | 49.01 s | 219 MB | 90% | Completed |
+| `06_PROKKA_DB.tsv` | 10 min 04.03 s | 2.90 GB | 99% | Completed |
 
 Example benchmark command:
 
@@ -242,6 +252,10 @@ Example benchmark command:
 
 For Apptainer/Singularity:
 /usr/bin/time -v apptainer run --bind "$PWD:/project" niche_workflow.sif data/your_input_file.tsv
+
+> Across the six benchmarked datasets, the complete workflow finished successfully for all inputs. Runtime ranged from 14.42 seconds for `02_DSK_P_DB.tsv` to 10 minutes 04.03 seconds for `06_PROKKA_DB.tsv`. Maximum memory usage ranged from approximately 217 MB to 2.90 GB, based on maximum resident set size reported by `/usr/bin/time -v`.
+
+> The `06_PROKKA_DB.tsv` dataset required substantially more runtime and memory than the other datasets, consistent with the larger feature space expected from PROKKA-derived gene presence-absence matrices.
 ```
 
 ## License
