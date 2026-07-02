@@ -10,7 +10,8 @@ This repository accompanies:
 
 ---
 ## Workflow Diagram
-<img width="1280" height="720" alt="modules_simple" src="https://github.com/user-attachments/assets/a52da3e6-1e6e-49f2-adf6-10166ccc11ca" />
+<img width="1672" height="941" alt="Figure_S1" src="https://github.com/user-attachments/assets/6803ed43-bad2-432c-9ea7-e600601aab62" />
+
 
 
 
