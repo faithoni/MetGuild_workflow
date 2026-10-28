@@ -70,7 +70,6 @@ Before running the workflow, the repository should look like this:
 
 ```text
 metguild_workflow/
-├── metguild_workflow.sif
 ├── run_metguild_workflow.sh
 ├── environment.yml
 ├── scripts/
@@ -110,11 +109,13 @@ The workflow runs the following steps automatically:
 | 1    | `01_removing_zero_columns_K_Optimization.py`        | Removes all-zero and all-NaN columns, then performs k-optimization |
 | 2    | `02_kmeans_mds_clustering.py`                       | Runs KMeans clustering and MDS visualization                       |
 | 3    | `03_hierarchical_clustering.py`                     | Runs hierarchical clustering                                       |
+| 3b   | `Embedded in run_metguild_workflow.sh`              | run_niches_workflow.sh	Combines clustering assignments with genome taxonomy|
 | 4    | `04_ANOVA_testing.py` or `04_chi-square_testing.py` | Performs statistical testing depending on the input filename       |
 | 5    | `05_spearman_feature_vs_feature_correlation.py`     | Computes feature-vs-feature Spearman correlations                  |
 | 6    | `06_spearman_feature_vs_cluster_correlation.py`     | Computes feature-vs-cluster Spearman correlations                  |
 | 7    | `07_spearman_cluster_vs_cluster_correlation.py`     | Computes cluster-vs-cluster Spearman correlations                  |
 | 8    | `08_merge_filtered_files.py`                        | Generates network edge lists and node attribute files              |
+| 9    | `Embedded in run_metguild_workflow.sh`              | Generates the populated SQLite provenance database and SQL reconstruction dump|
 
 ```
 
