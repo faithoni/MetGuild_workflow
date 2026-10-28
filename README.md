@@ -1,6 +1,6 @@
-`# MetGuild-Workflow for Defining Metabolic potential guilds from Metagenomic Data`
+`MetGuild-Workflow for Defining Metabolic potential guilds from Metagenomic Data`
 ---
-## Description
+### Description
 This repository contains a reproducible downstream workflow for defining metabolic metguild from functionally annotated genome-centric metagenomic data.
 
 The workflow supports feature matrix cleaning, clustering, statistical filtering, correlation analysis, network construction, and generation of network-ready node and edge files.
@@ -11,7 +11,7 @@ This repository accompanies:
 **Faith I. Oni, Ulisses N. Rocha Year: 2026.** *MetGuild: A Genome-Resolved Workflow for Identifying Metabolic Potential Guilds: Application to a Long-Term Sulfate-Reducing Benzene-Degrading Consortium. **Ecological Informatics.** DOI: [DOI]
 
 ---
-## Workflow Diagram
+### Workflow Diagram
 
 <img width="1021" height="422" alt="Fig_01" src="https://github.com/user-attachments/assets/d658720d-dba6-4bc9-a4a6-559ca07b0c26" />
 
@@ -61,6 +61,8 @@ For example:
 ```bash
 bash run_metguild_workflow.sh Example_dataset/matrices/01_DSK_DB.tsv
 ```
+Users should provide the path to their own input matrix (CSV or TSV). The file may be stored anywhere. Absolute paths are supported; relative paths are resolved from the directory containing run_metguild_workflow.sh. Example datasets are provided in Example_dataset/matrices/
+
 When prompted:
 - Select 1 for chi-square or 2 for ANOVA, as appropriate for the analysis.
 - Enter Example_taxonomy.csv when asked for the taxonomy path.
