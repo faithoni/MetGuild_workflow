@@ -62,7 +62,9 @@ For example:
 ```bash
 bash run_niches_workflow.sh data/01_DSK_DB.tsv
 ```
-
+When prompted:
+- Select 1 for chi-square or 2 for ANOVA, as appropriate for the analysis.
+- Enter Example_taxonomy.csv when asked for the taxonomy path.
 ## Repository structure
 
 Before running the workflow, the repository should look like this:
