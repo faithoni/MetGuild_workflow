@@ -1,4 +1,4 @@
-# Workflow for Defining Metabolic niches from Metagenomic Data
+# MetGuild-Workflow for Defining Metabolic niches from Metagenomic Data
 ---
 ## Description
 This repository contains a reproducible downstream workflow for defining metabolic niches from functionally annotated genome-centric metagenomic data.
@@ -6,10 +6,11 @@ This repository contains a reproducible downstream workflow for defining metabol
 The workflow supports feature matrix cleaning, clustering, statistical filtering, correlation analysis, network construction, and generation of network-ready node and edge files.
 
 This repository accompanies:
-**Faith I. Oni, Ulisses N. Rocha Year: 2026.** *Genome-Resolved Insights into Microbial Metabolic Niches in a Long-Term Sulfate-Reducing, Benzene-Degrading Community*. **Ecological Informatics.** DOI: [DOI]
+**Faith I. Oni, Ulisses N. Rocha Year: 2026.** *MetGuild: A Genome-Resolved Workflow for Identifying Metabolic Potential Guilds: Application to a Long-Term Sulfate-Reducing Benzene-Degrading Consortium. **Ecological Informatics.** DOI: [DOI]
 
 ---
 ## Workflow Diagram
+
 <img width="1672" height="941" alt="Figure_S1" src="https://github.com/user-attachments/assets/6803ed43-bad2-432c-9ea7-e600601aab62" />
 
 
@@ -96,26 +97,7 @@ Genomes
 This column is used as the genome/sample identifier throughout the workflow.
 The remaining columns should represent genes, pathways, modules, reactions, or other functional features.
 
-## Running with Apptainer/ Singularity
 
-Build the container:
-```bash
-apptainer build niche_workflow.sif niche_workflow.def
-```
-Test the container:
-```bash
-apptainer test niche_workflow.sif
-```
-Execute:
-```bash
-apptainer exec niche_workflow.sif python --version
-```
-Run:
-```bash
-apptainer run --bind "$PWD:/project" niche_workflow.sif data/your_input_file.tsv
-```
-Example:
-apptainer run --bind "$PWD:/project" niche_workflow.sif data/01_DSK_DB.tsv
 
 ## Workflow steps
 ```text
@@ -171,34 +153,6 @@ Six example datasets generated using the annotation strategies described in the 
 ```
 Users may analyze one dataset or several datasets independently.
 
-----
-
-## Biological feature selection: A critical workflow design step
-
-One of the most important steps in this workflow is the **selection of genes, pathways, or metabolic functions** used to generate at least one functional potential dataset/matrix.
-This step is not only a technical preprocessing choice; it is a **biologically defining step** that strongly shapes the interpretation of downstream clustering, statistical testing, correlation analyses, and network construction. The quality and relevance of the final metabolic niche assignments depend heavily on how well the selected features represent the metabolic processes likely to occur in the community under study.
-
-Selection of genes and pathways should therefore be guided by:
-
-- the **community process being investigated**
-- **intensive literature review**
-- a **comprehensive understanding of the expected metabolic processes** within the system
-- prior knowledge of relevant taxa, substrates, intermediates, and environmental conditions
-
-For example, in a community enriched for anaerobic benzene degradation, the selected feature set should emphasize pathways and genes linked to anaerobic aromatic compound activation and degradation, sulfate reduction, hydrogen metabolism, acetate turnover, syntrophic interactions, carbon fixation, and other functions that are biologically plausible in that ecosystem.
-
-Because this workflow is modular, users may generate multiple functional potential datasets using different annotation strategies. However, at least one dataset should be built around a **carefully justified feature set** that is biologically relevant to the community process of interest.
-
-Before running the downstream analysis steps, the user should define:
-
-1. the **ecological or metabolic process of interest**
-2. the **key pathways expected to contribute to that process**
-3. the **genes, reactions, or modules that best represent those pathways**
-4. the **annotation strategy** that will be used to detect them
-
-This knowledge-guided feature selection step is essential for ensuring that the resulting datasets are informative, interpretable, and appropriate for defining metabolic niches.
-
----
 
 
 ## Data availability
@@ -251,8 +205,7 @@ Example benchmark command:
 
 /usr/bin/time -v bash run_niches_workflow.sh data/your_input_file.tsv
 
-For Apptainer/Singularity:
-/usr/bin/time -v apptainer run --bind "$PWD:/project" niche_workflow.sif data/your_input_file.tsv
+
 
 > Across the six benchmarked datasets, the complete workflow finished successfully for all inputs. Runtime ranged from 14.42 seconds for `02_DSK_P_DB.tsv` to 10 minutes 04.03 seconds for `06_PROKKA_DB.tsv`. Maximum memory usage ranged from approximately 217 MB to 2.90 GB, based on maximum resident set size reported by `/usr/bin/time -v`.
 
