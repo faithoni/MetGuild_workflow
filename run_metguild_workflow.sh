@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # ------------------------------------------------------------
-# run_niches_workflow.sh
+# run_metguild_workflow.sh
 #
-# Runs the full NICHEs workflow, saves all outputs inside
+# Runs the full MetGuild workflow, saves all outputs inside
 # a folder named after the original input file prefix, and creates
 # a populated SQLite database linking inputs, scripts, workflow steps,
 # intermediate outputs, final network outputs, and the actual contents
@@ -15,17 +15,17 @@ set -euo pipefail
 #     data/your_dataset.tsv
 #
 #   Command:
-#     bash run_niches_workflow.sh data/your_dataset.tsv
+#     bash run_metguild_workflow.sh data/your_dataset.tsv
 #
 #   Output folder:
 #     your_dataset/
 #
 # Usage:
-#   bash run_niches_workflow.sh path/to/your_input_file.tsv
-#   bash run_niches_workflow.sh path/to/your_input_file.csv
+#   bash run_metguild_workflow.sh path/to/your_input_file.tsv
+#   bash run_metguild_workflow.sh path/to/your_input_file.csv
 #
 # Optional:
-#   bash run_niches_workflow.sh path/to/your_input_file.tsv 20
+#   bash run_metguild_workflow.sh path/to/your_input_file.tsv 20
 #
 # Step 4 statistical-test selection:
 #   - Inspect feature values first: only 0/1 -> recommend chi-square;
