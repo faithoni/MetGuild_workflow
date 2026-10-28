@@ -5,6 +5,8 @@ This repository contains a reproducible downstream workflow for defining metabol
 
 The workflow supports feature matrix cleaning, clustering, statistical filtering, correlation analysis, network construction, and generation of network-ready node and edge files.
 
+This workflow only run steps in Phase I and Phase II. Phase III is not computational but guided by expert knowledge in the interpretation of the network modules as metabolic potential guilds. 
+
 This repository accompanies:
 **Faith I. Oni, Ulisses N. Rocha Year: 2026.** *MetGuild: A Genome-Resolved Workflow for Identifying Metabolic Potential Guilds: Application to a Long-Term Sulfate-Reducing Benzene-Degrading Consortium. **Ecological Informatics.** DOI: [DOI]
 
