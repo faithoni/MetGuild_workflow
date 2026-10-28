@@ -86,7 +86,7 @@ metguild_workflow/
 └── data/
     └── your_input_file.tsv
 ```
-## NOTE
+#### NOTE
 MetGuild runs chi-square or ANOVA according to the user’s selection. The workflow inspects feature values and provides a preliminary recommendation; it does not verify the statistical assumptions.
 
 ## Input file requirements
