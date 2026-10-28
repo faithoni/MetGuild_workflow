@@ -59,7 +59,7 @@ bash run_metguild_workflow.sh data/your_input_file.tsv
 ```
 For example:
 ```bash
-bash run_metguild_workflow.sh data/01_DSK_DB.tsv
+bash run_metguild_workflow.sh Example_dataset/matrices/01_DSK_DB.tsv
 ```
 When prompted:
 - Select 1 for chi-square or 2 for ANOVA, as appropriate for the analysis.
@@ -86,6 +86,8 @@ metguild_workflow/
 └── data/
     └── your_input_file.tsv
 ```
+## NOTE
+MetGuild runs chi-square or ANOVA according to the user’s selection. The workflow inspects feature values and provides a preliminary recommendation; it does not verify the statistical assumptions.
 
 ## Input file requirements
 
