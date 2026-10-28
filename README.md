@@ -1,4 +1,4 @@
-# MetGuild-Workflow for Defining Metabolic metguild from Metagenomic Data
+`# MetGuild-Workflow for Defining Metabolic potential guilds from Metagenomic Data`
 ---
 ## Description
 This repository contains a reproducible downstream workflow for defining metabolic metguild from functionally annotated genome-centric metagenomic data.
