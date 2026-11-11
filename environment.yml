@@ -1,15 +1,13 @@
-name: niches_workflow
+name: metguild_workflow
 channels:
   - conda-forge
-  - defaults
-
+  - nodefaults
+  
 dependencies:
-  - python=3.10
-  - pandas
-  - numpy
-  - matplotlib
-  - scikit-learn
-  - scipy
-  - seaborn
-  - plotly
-  - pip
+  - "python>=3.10,<3.14"
+  - "numpy>=1.24,<3"
+  - "pandas>=2,<4"
+  - "scipy>=1.10,<2"
+  - "scikit-learn>=1.2,<2"
+  - "matplotlib>=3.7,<4"
+  - "plotly>=5.18,<7"
