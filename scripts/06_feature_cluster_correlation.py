@@ -93,7 +93,7 @@ def load_retained_dataset(
     if not path.is_file():
         raise FileNotFoundError(f"Step 4 significant-feature dataset not found: {path}")
 
-    df = pd.read_csv(path, dtype={"Genomes": "string"})
+    df = pd.read_csv(path, dtype={"Genomes": "string"}, keep_default_na=False)
     required = {"Genomes", "Cluster"}
     missing = required - set(df.columns)
     if missing:
