@@ -12,6 +12,24 @@ usage() {
 MetGuild Workflow
 =================
 
+Before running MetGuild
+-----------------------
+
+1. Activate the MetGuild Conda environment:
+
+   conda activate metguild_workflow
+
+2. Change to the MetGuild repository directory, for example:
+
+   cd /path/to/MetGuild_updated
+
+3. Run the workflow:
+
+   bash run_metguild_workflow.sh <input_matrix> [MAX_K] [OPTIONS]
+
+The Conda environment should be activated before every new shell/session in
+which MetGuild is run. The workflow runner does not activate Conda itself.
+
 Usage:
   bash run_metguild_workflow.sh <input_matrix> [MAX_K] [OPTIONS]
 
@@ -188,6 +206,8 @@ Step 8 - Network construction
   * Final network cluster nodes are made solution-specific, e.g. C1_KM3,
     C1_HC3. Feature names are preserved exactly.
   * If Step 3b was run, cluster node attributes include MAG_Phyla.
+  * Before Step 9, the runner verifies the network manifest, summary, edge
+    lists, and node tables and requires at least one retained network edge.
 
 Step 9 - SQLite/SQL workflow provenance
   * Build a populated SQLite database linking workflow steps, scripts, inputs,
@@ -454,7 +474,8 @@ done
 
 if ! command -v python >/dev/null 2>&1; then
     echo "Error: Python was not found." >&2
-    echo "Activate the MetGuild conda environment first." >&2
+    echo "Activate the MetGuild Conda environment first:" >&2
+    echo "  conda activate metguild_workflow" >&2
     exit 1
 fi
 
@@ -485,6 +506,8 @@ if missing:
     print("Error: Missing required Python packages:")
     for package in missing:
         print(f"  - {package}")
+    print("\nMake sure the MetGuild Conda environment is active:")
+    print("  conda activate metguild_workflow")
     raise SystemExit(1)
 PY
 
@@ -655,6 +678,226 @@ fi
 run_step 8 "Network edge/node construction" \
     python scripts/08_merge_filtered_files.py "${STEP8_ARGS[@]}"
 
+# ------------------------------------------------------------
+# Validate Step 8 outputs before provenance export
+# ------------------------------------------------------------
+NETWORK_ROOT="$OUTPUT_DIR/07_network_construction"
+NETWORK_MANIFEST="$NETWORK_ROOT/network_construction_manifest.json"
+NETWORK_SUMMARY="$NETWORK_ROOT/01_edge_list_merge_summary.csv"
+NETWORK_EDGE_DIR="$NETWORK_ROOT/edge_lists"
+NETWORK_NODE_DIR="$NETWORK_ROOT/nodes_attributes"
+
+echo "Validating Step 8 network outputs before SQL export..."
+python - \
+    "$NETWORK_MANIFEST" \
+    "$NETWORK_SUMMARY" \
+    "$NETWORK_EDGE_DIR" \
+    "$NETWORK_NODE_DIR" <<'METGUILD_NETWORK_VALIDATE_PY'
+import csv
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+summary_path = Path(sys.argv[2])
+edge_dir = Path(sys.argv[3])
+node_dir = Path(sys.argv[4])
+
+errors = []
+
+if not manifest_path.is_file():
+    errors.append(f"missing network manifest: {manifest_path}")
+if not summary_path.is_file():
+    errors.append(f"missing network summary: {summary_path}")
+if not edge_dir.is_dir():
+    errors.append(f"missing edge-list directory: {edge_dir}")
+if not node_dir.is_dir():
+    errors.append(f"missing node-attribute directory: {node_dir}")
+
+if errors:
+    raise SystemExit(
+        "Error: Step 8 network validation failed before SQL export:\n  - "
+        + "\n  - ".join(errors)
+    )
+
+try:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit(f"Error: Could not read network manifest {manifest_path}: {exc}")
+
+if manifest.get("status") != "success":
+    errors.append("network_construction_manifest.json does not report status='success'")
+
+runs = manifest.get("runs")
+if not isinstance(runs, list) or not runs:
+    errors.append("network manifest contains no completed network runs")
+    runs = []
+
+def resolve_output_path(raw: str) -> Path:
+    path = Path(raw)
+    if path.is_absolute():
+        return path
+    # Step 8 normally stores absolute paths; relative paths are interpreted
+    # relative to the network-construction directory for robustness.
+    return (manifest_path.parent / path).resolve()
+
+def count_csv_rows(path: Path) -> tuple[list[str], int]:
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.reader(handle)
+        try:
+            header = next(reader)
+        except StopIteration:
+            return [], 0
+        return header, sum(1 for row in reader if any(cell.strip() for cell in row))
+
+total_declared_edges = 0
+total_declared_nodes = 0
+nonempty_edge_lists = 0
+nonempty_node_tables = 0
+validated_runs = 0
+
+for index, run in enumerate(runs, start=1):
+    label = f"network run #{index}"
+    method = run.get("method_code", run.get("method", "?"))
+    k = run.get("requested_k", "?")
+    label = f"{method}, k={k}"
+
+    if run.get("status") != "success":
+        errors.append(f"{label}: status is {run.get('status')!r}, expected 'success'")
+        continue
+
+    try:
+        declared_edges = int(run.get("final_edges", 0))
+        declared_nodes = int(run.get("nodes_total", 0))
+    except (TypeError, ValueError):
+        errors.append(f"{label}: final_edges/nodes_total are not valid integers")
+        continue
+
+    if declared_edges < 0 or declared_nodes < 0:
+        errors.append(f"{label}: negative edge/node counts are invalid")
+        continue
+
+    outputs = run.get("outputs")
+    if not isinstance(outputs, dict):
+        errors.append(f"{label}: outputs mapping is missing")
+        continue
+
+    edge_meta = None
+    node_meta = None
+    for name, meta in outputs.items():
+        if not isinstance(meta, dict) or not isinstance(meta.get("path"), str):
+            continue
+        if str(name).endswith("_edge_list.csv"):
+            edge_meta = meta
+        elif str(name).endswith("_node_attributes.csv"):
+            node_meta = meta
+
+    if edge_meta is None:
+        errors.append(f"{label}: manifest does not identify an edge-list CSV")
+        continue
+    if node_meta is None:
+        errors.append(f"{label}: manifest does not identify a node-attribute CSV")
+        continue
+
+    edge_path = resolve_output_path(edge_meta["path"])
+    node_path = resolve_output_path(node_meta["path"])
+
+    if not edge_path.is_file():
+        errors.append(f"{label}: missing edge-list file: {edge_path}")
+        continue
+    if not node_path.is_file():
+        errors.append(f"{label}: missing node-attribute file: {node_path}")
+        continue
+    if edge_path.stat().st_size == 0:
+        errors.append(f"{label}: edge-list file is zero bytes: {edge_path}")
+        continue
+    if node_path.stat().st_size == 0:
+        errors.append(f"{label}: node-attribute file is zero bytes: {node_path}")
+        continue
+
+    try:
+        edge_header, edge_rows = count_csv_rows(edge_path)
+        node_header, node_rows = count_csv_rows(node_path)
+    except Exception as exc:
+        errors.append(f"{label}: could not read network CSV output: {exc}")
+        continue
+
+    required_edge_columns = {"node1", "node2", "weight"}
+    required_node_columns = {"Node", "Group"}
+    if not required_edge_columns.issubset(set(edge_header)):
+        errors.append(
+            f"{label}: edge list is missing required columns "
+            f"{sorted(required_edge_columns - set(edge_header))}: {edge_path}"
+        )
+    if not required_node_columns.issubset(set(node_header)):
+        errors.append(
+            f"{label}: node table is missing required columns "
+            f"{sorted(required_node_columns - set(node_header))}: {node_path}"
+        )
+
+    if edge_rows != declared_edges:
+        errors.append(
+            f"{label}: manifest reports {declared_edges} edges but "
+            f"{edge_path.name} contains {edge_rows} data rows"
+        )
+    if node_rows != declared_nodes:
+        errors.append(
+            f"{label}: manifest reports {declared_nodes} nodes but "
+            f"{node_path.name} contains {node_rows} data rows"
+        )
+    if declared_edges > 0 and declared_nodes == 0:
+        errors.append(f"{label}: non-empty edge list has no nodes")
+
+    total_declared_edges += declared_edges
+    total_declared_nodes += declared_nodes
+    nonempty_edge_lists += int(edge_rows > 0)
+    nonempty_node_tables += int(node_rows > 0)
+    validated_runs += 1
+
+try:
+    with summary_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        summary_rows = list(csv.DictReader(handle))
+except Exception as exc:
+    errors.append(f"could not read network summary CSV: {exc}")
+    summary_rows = []
+
+if not summary_rows:
+    errors.append("network summary CSV contains no data rows")
+elif validated_runs and len(summary_rows) != validated_runs:
+    errors.append(
+        f"network summary has {len(summary_rows)} rows but {validated_runs} "
+        "successful network runs were validated"
+    )
+
+# A full MetGuild run should not be reported as successful if all filtered
+# correlation stages yield zero final network edges. Individual method/k
+# solutions are allowed to be empty, but the complete run must contain at
+# least one constructed network edge and at least one populated node table.
+if total_declared_edges <= 0 or nonempty_edge_lists <= 0:
+    errors.append(
+        "Step 8 produced zero retained network edges across all clustering "
+        "solutions; refusing SQL export and final workflow success"
+    )
+if total_declared_nodes <= 0 or nonempty_node_tables <= 0:
+    errors.append(
+        "Step 8 produced no populated network node table; refusing SQL export "
+        "and final workflow success"
+    )
+
+if errors:
+    raise SystemExit(
+        "Error: Step 8 network validation failed before SQL export:\n  - "
+        + "\n  - ".join(errors)
+    )
+
+print(
+    "Step 8 network validation passed: "
+    f"{validated_runs} solution(s), {total_declared_edges} total edge(s), "
+    f"{total_declared_nodes} total node record(s), "
+    f"{nonempty_edge_lists} non-empty edge list(s)."
+)
+METGUILD_NETWORK_VALIDATE_PY
+echo ""
 
 # ------------------------------------------------------------
 # Step 9: Build populated SQLite/SQL workflow provenance
@@ -1540,6 +1783,7 @@ echo "  Statistical screening:   $OUTPUT_DIR/05_stat_analysis/"
 echo "  Correlations:            $OUTPUT_DIR/06_correlation/"
 echo "  Network edge lists:      $OUTPUT_DIR/07_network_construction/edge_lists/"
 echo "  Network node attributes: $OUTPUT_DIR/07_network_construction/nodes_attributes/"
+echo "  Network validation:      passed before provenance export"
 echo "  SQLite provenance DB:    $PROVENANCE_DB"
 echo "  Full SQL dump:           $PROVENANCE_SQL"
 echo "============================================================"
