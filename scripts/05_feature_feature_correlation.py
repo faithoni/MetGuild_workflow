@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """MetGuild Step 5: feature-feature correlation screening.
 
-Takes the statistically retained feature datasets from Step 4 and computes
+Consumes the statistically retained feature datasets from Step 4 and computes
 Spearman feature-feature correlations separately for each clustering method and
 candidate k. Pairwise p-values are adjusted with Benjamini-Hochberg FDR within
 each clustering solution. Perfect correlations (|rho| = 1) are always excluded
@@ -80,7 +80,7 @@ def load_retained_dataset(path: Path, expected_genomes: list[str]) -> tuple[pd.D
     if not path.is_file():
         raise FileNotFoundError(f"Step 4 significant-feature dataset not found: {path}")
 
-    df = pd.read_csv(path, dtype={"Genomes": "string"})
+    df = pd.read_csv(path, dtype={"Genomes": "string"}, keep_default_na=False)
     required = {"Genomes", "Cluster"}
     missing = required - set(df.columns)
     if missing:
