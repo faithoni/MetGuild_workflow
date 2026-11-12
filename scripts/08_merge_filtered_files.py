@@ -86,7 +86,7 @@ def cluster_network_name(cluster: str, method_code: str, k: int) -> str:
 def read_filtered_table(path: Path, required: set[str]) -> pd.DataFrame:
     if not path.is_file():
         raise FileNotFoundError(f"Expected filtered correlation file not found: {path}")
-    df = pd.read_csv(path)
+    df = pd.read_csv(path, dtype=str, keep_default_na=False)
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"{path}: missing required columns: {sorted(missing)}")
@@ -522,8 +522,13 @@ def main() -> int:
                     "correlation", "p_value", "adjusted_p_value", "edge_type",
                 ])
 
-            combined, removal = remove_invalid_edges(combined)
+            # Cluster endpoints must be made solution-specific before self-loop
+            # filtering. A feature may legitimately have the same literal name
+            # as an upstream cluster label (for example feature "C1" vs cluster
+            # "C1"). After suffixing, those are distinct network nodes:
+            # "C1" and "C1_KM2"/"C1_HC2".
             combined = suffix_cluster_nodes(combined, method_code, k)
+            combined, removal = remove_invalid_edges(combined)
             assert_no_duplicate_undirected_edges(combined)
 
             # Preserve signed correlation and also provide a non-negative magnitude for MCL.
