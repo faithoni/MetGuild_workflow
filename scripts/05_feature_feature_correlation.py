@@ -168,7 +168,8 @@ def flatten_pairs(corr_df: pd.DataFrame, pval_df: pd.DataFrame, n_genomes: int) 
 
 def adjusted_p_matrix(flat: pd.DataFrame, features: list[str]) -> pd.DataFrame:
     mat = pd.DataFrame(np.nan, index=features, columns=features, dtype=float)
-    np.fill_diagonal(mat.values, 0.0)
+    for i in range(len(features)):
+        mat.iat[i, i] = 0.0
     for row in flat.itertuples(index=False):
         mat.loc[row.Var1, row.Var2] = row.Adjusted_P_Value
         mat.loc[row.Var2, row.Var1] = row.Adjusted_P_Value

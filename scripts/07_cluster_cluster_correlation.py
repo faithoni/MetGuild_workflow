@@ -258,7 +258,8 @@ def spearman_cluster_matrices(values: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
 
     corr_df = pd.DataFrame(corr, index=cols, columns=cols)
     pval_df = pd.DataFrame(pvals, index=cols, columns=cols)
-    np.fill_diagonal(pval_df.values, np.nan)
+    for i in range(len(cols)):
+        pval_df.iat[i, i] = np.nan
     return corr_df, pval_df
 
 
@@ -283,7 +284,8 @@ def flatten_pairs(corr_df: pd.DataFrame, pval_df: pd.DataFrame) -> pd.DataFrame:
 
 def adjusted_p_matrix(flat: pd.DataFrame, clusters: list[str]) -> pd.DataFrame:
     mat = pd.DataFrame(np.nan, index=clusters, columns=clusters, dtype=float)
-    np.fill_diagonal(mat.values, 0.0)
+    for i in range(len(clusters)):
+        mat.iat[i, i] = 0.0
     for row in flat.itertuples(index=False):
         c1 = str(row.Var1)
         c2 = str(row.Var2)
