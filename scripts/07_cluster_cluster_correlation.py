@@ -5,6 +5,12 @@ For each clustering method and candidate k, this stage builds one metabolic
 profile per cluster from the Step 4 retained features and compares cluster
 profiles using Spearman rank correlation.
 
+Profile construction preserves the information content of the input matrix:
+- binary matrices: cluster profile value = feature prevalence within cluster
+  (fraction of genomes carrying the feature)
+- proportional matrices: cluster profile value = mean proportional feature
+  value within cluster
+
 Pairwise p-values are adjusted with Benjamini-Hochberg FDR within each
 clustering solution. By default, positive cluster-cluster associations are
 retained when rho >= threshold and BH-adjusted p < alpha. Perfect correlations
@@ -98,7 +104,7 @@ def load_retained_dataset(
     if not path.is_file():
         raise FileNotFoundError(f"Step 4 significant-feature dataset not found: {path}")
 
-    df = pd.read_csv(path, dtype={"Genomes": "string"})
+    df = pd.read_csv(path, dtype={"Genomes": "string"}, keep_default_na=False)
     required = {"Genomes", "Cluster"}
     missing = required - set(df.columns)
     if missing:
