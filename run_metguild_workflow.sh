@@ -1997,6 +1997,74 @@ def generate_html_report(con: sqlite3.Connection, destination: Path, run_dir: Pa
             return "Network output"
         return "Result"
 
+    def include_in_results_map(relative_path: str, ui_type: str, step_order: int, is_external: int) -> bool:
+        """Return True only for the curated, user-facing scientific result map.
+
+        The SQLite/SQL provenance still stores every artifact.  This predicate only
+        controls which artifacts become browser nodes.  The visible graph is limited
+        to original sources, main figures/interactive visualizations, and tables that
+        are consumed by a later scientific step or are final network products.
+        """
+        path_obj = Path(relative_path)
+        lower = path_obj.as_posix().lower()
+        name = path_obj.name.lower()
+
+        # Keep original user-supplied matrix/taxonomy as terminal provenance sources.
+        # Their staged copies are deliberately hidden.
+        if int(is_external):
+            return ui_type == "table"
+
+        # Metadata, JSON manifests, text/log files, and helper products are not
+        # scientific result nodes in the browser map.
+        if ui_type == "metadata":
+            return False
+
+        # Scientific figures are retained unless they are clearly auxiliary/debug
+        # renderings.  This also future-proofs later workflow steps if they add a
+        # meaningful figure without changing the provenance code.
+        if ui_type in {"figure", "interactive_plot"}:
+            auxiliary_tokens = ("diagnostic", "debug", "preview", "thumbnail", "tmp", "test_plot")
+            return step_order in range(1, 10) and not any(token in name for token in auxiliary_tokens)
+
+        if ui_type != "table":
+            return False
+
+        # Step 0: hide staged copies; external source nodes above are sufficient.
+        if step_order == 0:
+            return False
+
+        # Step 1: the cleaned matrix feeds clustering/statistics. Candidate-k score
+        # tables are diagnostic evidence and remain in SQLite but not in the map.
+        if step_order == 1:
+            return "clean" in name and "score" not in name and "summary" not in name
+
+        # Steps 2-3: cluster-assignment tables feed taxonomy/statistical testing.
+        if step_order == 2:
+            return name.endswith("_km.csv") or name.endswith("_km.tsv")
+        if step_order == 3:
+            return name.endswith("_hc.csv") or name.endswith("_hc.tsv")
+
+        # Step 3b: taxonomy annotations are consumed when Step 8 builds node
+        # attributes.  Summary/diagnostic tables are not shown.
+        if step_order == 4:
+            return "summary" not in name and "diagnostic" not in name
+
+        # Step 4: only retained/significant feature tables feed Steps 5-7.
+        if step_order == 5:
+            retained = ("_stat_sig" in name or "significant" in name or name.endswith("_sig.csv") or name.endswith("_sig.tsv"))
+            return retained and "non_sig" not in name and "nonsig" not in name and "summary" not in name
+
+        # Steps 5-7: only filtered correlation edge tables feed network assembly.
+        if step_order in {6, 7, 8}:
+            return "filtered" in name and "summary" not in name
+
+        # Step 8: edge lists and node-attribute tables are the final scientific
+        # network products. Merge summaries remain available in SQLite only.
+        if step_order == 9:
+            return ("/edge_lists/" in "/" + lower or "/nodes_attributes/" in "/" + lower) and "summary" not in name
+
+        return False
+
     def read_table_preview(path: Path, limit_rows: int = 30, limit_columns: int = 80) -> tuple[list[str], list[list[str]], str | None, bool]:
         try:
             with path.open("r", encoding="utf-8-sig", errors="replace", newline="") as handle:
@@ -2051,6 +2119,8 @@ def generate_html_report(con: sqlite3.Connection, destination: Path, run_dir: Pa
         else:
             step = step_by_id.get(int(producing_step_id)) if producing_step_id is not None else None
         if step is None or step["number"] >= 10:
+            continue
+        if not include_in_results_map(str(relative_path), ui_type, int(step["number"]), int(is_external)):
             continue
         method, clusters = artifact_solution_context(str(relative_path))
         source_path = artifact_path(str(relative_path), int(is_external))
@@ -2112,35 +2182,91 @@ def generate_html_report(con: sqlite3.Connection, destination: Path, run_dir: Pa
         edge_keys.add(key)
         edges.append({"from": parent, "to": child, "relation": str(relation)})
 
-    # Figures and interactive plots are often sibling outputs of the same analysis
-    # rather than explicit children in the file-level provenance graph.  Add a
-    # visualization link to the closest table from the same step/method/k so the
-    # browser map makes those relationships visible without changing SQLite lineage.
+    # Add browser-only visualization links using deterministic provenance rules.
+    # Filename similarity is deliberately NOT used: it can connect a figure to a
+    # scientifically unrelated table that merely has a similar name.
+    node_by_rel = {Path(str(n["relative_path"])).as_posix(): n for n in nodes}
+    artifact_role_by_id = {int(row[0]): str(row[3]) for row in artifact_rows}
+
+    def add_browser_edge(parent: dict[str, Any] | None, child: dict[str, Any] | None, relation: str) -> None:
+        if not parent or not child or parent["id"] == child["id"]:
+            return
+        key = (parent["id"], child["id"], relation)
+        if key not in edge_keys:
+            edge_keys.add(key)
+            edges.append({"from": parent["id"], "to": child["id"], "relation": relation})
+
+    def node_for_declared_path(value: Any) -> dict[str, Any] | None:
+        if not isinstance(value, str) or not value.strip():
+            return None
+        raw = Path(value.strip())
+        if raw.is_absolute():
+            try:
+                rel_value = raw.resolve().relative_to(run_dir.resolve()).as_posix()
+            except (OSError, ValueError):
+                return None
+        else:
+            rel_value = raw.as_posix()
+            while rel_value.startswith("./"):
+                rel_value = rel_value[2:]
+        return node_by_rel.get(rel_value)
+
+    # Staged input/taxonomy copies are hidden from the curated map. Bridge only
+    # those known staging relationships explicitly so every visible lineage still
+    # terminates at the original user-supplied source file.
+    external_input_node = next((n for n in nodes if artifact_role_by_id.get(int(n["artifact_id"])) == "external_input"), None)
+    external_taxonomy_node = next((n for n in nodes if artifact_role_by_id.get(int(n["artifact_id"])) == "external_taxonomy"), None)
+    cleaned_nodes = [n for n in nodes if n["step"] == 1 and n["type"] == "table" and n["subtype"] == "Cleaned feature matrix"]
+    if len(cleaned_nodes) == 1:
+        add_browser_edge(external_input_node, cleaned_nodes[0], "source_input")
+    taxonomy_nodes = [n for n in nodes if n["step"] == 4 and n["type"] == "table"]
+    for taxonomy_node in taxonomy_nodes:
+        add_browser_edge(external_taxonomy_node, taxonomy_node, "taxonomy_source")
+
+    # Step 1 is defined by its manifest.  The score table and candidate-k plot are
+    # linked only when the manifest explicitly names those files.
+    step1_manifest_path = run_dir / "manifests" / "optimal_k_values.json"
+    if step1_manifest_path.is_file():
+        try:
+            step1_manifest = json.loads(step1_manifest_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            step1_manifest = {}
+        cleaned_node = node_for_declared_path(step1_manifest.get("cleaned_output_file"))
+        plot_node = node_for_declared_path(step1_manifest.get("kopt_plot"))
+        # kopt_scores and the manifest remain in SQLite but are intentionally hidden
+        # from the curated browser map. The manifest explicitly declares the cleaned
+        # matrix and plot, so this visible relationship is deterministic.
+        add_browser_edge(cleaned_node, plot_node, "visualizes_candidate_k_selection")
+
+        candidate_values = step1_manifest.get("unique_k_values")
+        if not isinstance(candidate_values, list):
+            candidate_values = []
+        candidate_values = {int(v) for v in candidate_values if str(v).strip().isdigit()}
+        if plot_node:
+            for candidate_node in nodes:
+                if candidate_node["step"] in {2, 3} and candidate_node["type"] == "table":
+                    if candidate_node["clusters"] in candidate_values:
+                        add_browser_edge(plot_node, candidate_node, "candidate_k_evidence_for_solution")
+
+    # KMeans and hierarchical figures are linked to the cluster-assignment table
+    # only when that relationship is unambiguous within the exact method/k context.
     by_context: dict[tuple[int, str, int | None], list[dict[str, Any]]] = {}
     for node in nodes:
         by_context.setdefault((node["step"], node["method"], node["clusters"]), []).append(node)
 
-    def token_prefix_score(a: str, b: str) -> tuple[int, int]:
-        ta = re.split(r"[^A-Za-z0-9]+", Path(a).stem.lower())
-        tb = re.split(r"[^A-Za-z0-9]+", Path(b).stem.lower())
-        common = 0
-        for x, y in zip(ta, tb):
-            if x != y:
-                break
-            common += 1
-        return common, -abs(len(ta) - len(tb))
-
-    for context_nodes in by_context.values():
-        tables = [n for n in context_nodes if n["type"] == "table"]
-        visuals = [n for n in context_nodes if n["type"] in {"figure", "interactive_plot"}]
-        if not tables:
+    for (step_number, method_code, k_value), context_nodes in by_context.items():
+        if step_number not in {2, 3} or not method_code or k_value is None:
             continue
-        for visual in visuals:
-            parent = max(tables, key=lambda t: token_prefix_score(t["name"], visual["name"]))
-            key = (parent["id"], visual["id"], "visualizes_or_summarizes")
-            if key not in edge_keys:
-                edge_keys.add(key)
-                edges.append({"from": parent["id"], "to": visual["id"], "relation": "visualizes_or_summarizes"})
+        assignment_tables = [
+            n for n in context_nodes
+            if n["type"] == "table" and n["subtype"] == "Cluster assignments"
+        ]
+        if len(assignment_tables) != 1:
+            continue
+        assignment = assignment_tables[0]
+        for visual in context_nodes:
+            if visual["type"] in {"figure", "interactive_plot"}:
+                add_browser_edge(assignment, visual, "visualizes_cluster_assignment")
 
     workflow_data = {
         "run": {
@@ -2314,19 +2440,33 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
   };
   const shortName = name => name.length > 38 ? `${name.slice(0, 35)}…` : name;
 
-  function collectAncestors(seedIds) {
+  function nodeMatchesSolution(node, method, cluster) {
+    if (!node) return false;
+    // Shared/global artifacts have no solution context and remain visible because
+    // they can be genuine ancestors of several clustering solutions.
+    if (!method && !cluster) return true;
+    if (method && node.method && node.method !== method) return false;
+    if (cluster && node.clusters !== null && String(node.clusters) !== cluster) return false;
+    return true;
+  }
+
+  function collectAncestors(seedIds, method, cluster) {
     const result = new Set(seedIds);
     const stack = [...seedIds];
     while (stack.length) {
       const id = stack.pop();
       (incoming.get(id) || []).forEach(edge => {
+        const parent = nodesById.get(edge.from);
+        // Do not cross a shared summary/manifest into an unrelated solution.
+        // This is the key guard that keeps KM,k=2 from pulling in HC or k=3/4.
+        if (!nodeMatchesSolution(parent, method, cluster)) return;
         if (!result.has(edge.from)) { result.add(edge.from); stack.push(edge.from); }
       });
     }
     return result;
   }
 
-  function collectConnected(seedId) {
+  function collectConnected(seedId, method, cluster) {
     const nodes = new Set([seedId]);
     const edges = new Set();
     const up = [seedId];
@@ -2334,6 +2474,8 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
     while (up.length) {
       const id = up.pop();
       (incoming.get(id) || []).forEach(edge => {
+        const parent = nodesById.get(edge.from);
+        if (!nodeMatchesSolution(parent, method, cluster)) return;
         const key = `${edge.from}|${edge.to}|${edge.relation}`;
         edges.add(key);
         if (!nodes.has(edge.from)) { nodes.add(edge.from); up.push(edge.from); }
@@ -2342,6 +2484,8 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
     while (down.length) {
       const id = down.pop();
       (outgoing.get(id) || []).forEach(edge => {
+        const child = nodesById.get(edge.to);
+        if (!nodeMatchesSolution(child, method, cluster)) return;
         const key = `${edge.from}|${edge.to}|${edge.relation}`;
         edges.add(key);
         if (!nodes.has(edge.to)) { nodes.add(edge.to); down.push(edge.to); }
@@ -2380,7 +2524,7 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
         if (cluster && String(node.clusters) !== cluster) return false;
         return Boolean(node.method || node.clusters !== null);
       }).map(node => node.id);
-      contextIds = collectAncestors(seeds);
+      contextIds = collectAncestors(seeds, method, cluster);
       seeds.forEach(id => contextIds.add(id));
     }
 
@@ -2434,7 +2578,9 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
     edgesGroup.innerHTML = '';
     nodesGroup.innerHTML = '';
 
-    const lineage = selectedId ? collectConnected(selectedId) : {nodes:new Set(), edges:new Set()};
+    const lineage = selectedId
+      ? collectConnected(selectedId, methodFilter.value, clusterFilter.value)
+      : {nodes:new Set(), edges:new Set()};
 
     rootData.edges.forEach(edge => {
       if (!visibleIds.has(edge.from) || !visibleIds.has(edge.to)) return;
@@ -2551,8 +2697,10 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
     selectedId = id;
     const node = nodesById.get(id);
     if (!node) return;
-    const inEdges = incoming.get(id) || [];
-    const outEdges = outgoing.get(id) || [];
+    const activeMethod = methodFilter.value;
+    const activeCluster = clusterFilter.value;
+    const inEdges = (incoming.get(id) || []).filter(edge => nodeMatchesSolution(nodesById.get(edge.from), activeMethod, activeCluster));
+    const outEdges = (outgoing.get(id) || []).filter(edge => nodeMatchesSolution(nodesById.get(edge.to), activeMethod, activeCluster));
     details.innerHTML = `
       <h2>${escapeHtml(node.name)}</h2>
       <div class="badges">
@@ -2620,7 +2768,7 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
   <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
   <button id="zoomIn" type="button" aria-label="Zoom in">+</button>
 </section>
-<p class="trace-note">Choose a clustering method and candidate <em>k</em> to keep that solution together with the shared upstream files needed to trace it back to the input. Select any result node to highlight its complete recorded lineage.</p>
+<p class="trace-note">This curated map shows only original source inputs, main scientific figures, tables consumed by a later analysis step, and final network tables. Diagnostic/intermediate matrices, summaries, manifests, p-value matrices, flattened tables, logs, and helper files remain recorded in SQLite/SQL but are intentionally hidden here. Method/<em>k</em> filters preserve only the selected solution plus shared upstream sources.</p>
 <main class="layout">
   <section class="graph-panel" aria-label="Interactive result lineage graph">
     <div class="graph-toolbar">
@@ -2628,7 +2776,6 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
         <span style="--legend-color:var(--table)">Table</span>
         <span style="--legend-color:var(--figure)">Figure</span>
         <span style="--legend-color:var(--interactive)">Interactive plot</span>
-        <span style="--legend-color:var(--metadata)">JSON/metadata</span>
       </div>
       <div class="summary-cards" id="summaryCards"></div>
     </div>
@@ -2645,7 +2792,7 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
     </div>
   </section>
   <aside class="details" id="details" aria-live="polite">
-    <div class="empty">Select a result node to inspect its file, preview, inputs, and outputs.</div>
+    <div class="empty">Select a main result node to inspect its file, preview, inputs, and downstream outputs.</div>
   </aside>
 </main>
 <script id="workflowData" type="application/json">{workflow_json}</script>
