@@ -2233,20 +2233,32 @@ def generate_html_report(con: sqlite3.Connection, destination: Path, run_dir: Pa
             step1_manifest = {}
         cleaned_node = node_for_declared_path(step1_manifest.get("cleaned_output_file"))
         plot_node = node_for_declared_path(step1_manifest.get("kopt_plot"))
-        # kopt_scores and the manifest remain in SQLite but are intentionally hidden
-        # from the curated browser map. The manifest explicitly declares the cleaned
-        # matrix and plot, so this visible relationship is deterministic.
+        hierarchical_plot_node = node_for_declared_path(step1_manifest.get("hierarchical_kopt_plot"))
+        # Candidate-k score tables and the manifest remain in SQLite but are
+        # intentionally hidden from the curated browser map. Both visible plots are
+        # linked only through the explicit paths declared by the Step 1 manifest.
         add_browser_edge(cleaned_node, plot_node, "visualizes_candidate_k_selection")
+        add_browser_edge(cleaned_node, hierarchical_plot_node, "visualizes_hierarchical_candidate_k_selection")
 
         candidate_values = step1_manifest.get("unique_k_values")
         if not isinstance(candidate_values, list):
             candidate_values = []
         candidate_values = {int(v) for v in candidate_values if str(v).strip().isdigit()}
-        if plot_node:
-            for candidate_node in nodes:
-                if candidate_node["step"] in {2, 3} and candidate_node["type"] == "table":
-                    if candidate_node["clusters"] in candidate_values:
-                        add_browser_edge(plot_node, candidate_node, "candidate_k_evidence_for_solution")
+        for candidate_node in nodes:
+            if candidate_node["type"] != "table" or candidate_node["clusters"] not in candidate_values:
+                continue
+            # kopt_plot is the combined six-panel diagnostic and therefore provides
+            # candidate-k evidence for both downstream clustering branches.
+            if plot_node and candidate_node["step"] in {2, 3}:
+                add_browser_edge(plot_node, candidate_node, "candidate_k_evidence_for_solution")
+            # hierarchical_kopt_plot is the dedicated average-linkage silhouette
+            # diagnostic and should feed only hierarchical clustering solutions.
+            if hierarchical_plot_node and candidate_node["step"] == 3:
+                add_browser_edge(
+                    hierarchical_plot_node,
+                    candidate_node,
+                    "hierarchical_candidate_k_evidence_for_solution",
+                )
 
     # KMeans and hierarchical figures are linked to the cluster-assignment table
     # only when that relationship is unambiguous within the exact method/k context.
