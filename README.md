@@ -350,7 +350,6 @@ Each command was run three times. The benchmark corresponds to Git commit:
 
 The Conda environment, Python version, compute-node hardware information, raw GNU `time` measurements, workflow logs, and exit codes were recorded under `benchmarks/current_release/`.
 
-Users benchmarking their own data should record the Git commit, software environment, hardware configuration, matrix dimensions, matrix type, command, number of replicates, wall-clock runtime, peak resident memory, and CPU utilization alongside their results.
 
 ## Citation
 
