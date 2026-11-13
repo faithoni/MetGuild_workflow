@@ -209,11 +209,17 @@ Step 8 - Network construction
   * Before Step 9, the runner verifies the network manifest, summary, edge
     lists, and node tables and requires at least one retained network edge.
 
-Step 9 - SQLite/SQL workflow provenance
+Step 9 - SQLite/SQL/HTML workflow provenance
   * Build a populated SQLite database linking workflow steps, scripts, inputs,
     intermediate outputs, and final network outputs.
   * Import the actual contents of CSV, TSV, and JSON artifacts into SQLite.
   * Write a complete SQL dump that can recreate the populated database.
+  * Write a self-contained browser workflow map showing connected tables,
+    figures, interactive plots, and metadata across the MetGuild steps.
+  * Filter the map by workflow step, result type, clustering method, and
+    candidate k; shared upstream source files remain visible for traceability.
+  * Select any result node to highlight its recorded upstream/downstream lineage,
+    inspect direct inputs/outputs, preview tables/figures, and open the result.
 
 Automatic output directory
 --------------------------
@@ -246,7 +252,8 @@ A full run is organized approximately as:
   |   `-- nodes_attributes/
   `-- 08_workflow_provenance/
       |-- <dataset>_workflow_provenance.db
-      `-- <dataset>_workflow_provenance.sql
+      |-- <dataset>_workflow_provenance.sql
+      `-- <dataset>_workflow_provenance.html
 
 USAGE
 }
@@ -900,18 +907,19 @@ METGUILD_NETWORK_VALIDATE_PY
 echo ""
 
 # ------------------------------------------------------------
-# Step 9: Build populated SQLite/SQL workflow provenance
+# Step 9: Build populated SQLite/SQL/HTML workflow provenance
 # ------------------------------------------------------------
 echo "============================================================"
-echo "Step 9/9: Building populated SQLite workflow provenance"
+echo "Step 9/9: Building SQLite, SQL, and HTML workflow provenance"
 echo "============================================================"
 
 RUN_COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 PROVENANCE_DIR="$OUTPUT_DIR/08_workflow_provenance"
 PROVENANCE_DB="$PROVENANCE_DIR/${INPUT_PREFIX}_workflow_provenance.db"
 PROVENANCE_SQL="$PROVENANCE_DIR/${INPUT_PREFIX}_workflow_provenance.sql"
+PROVENANCE_HTML="$PROVENANCE_DIR/${INPUT_PREFIX}_workflow_provenance.html"
 mkdir -p "$PROVENANCE_DIR"
-rm -f "$PROVENANCE_DB" "$PROVENANCE_SQL"
+rm -f "$PROVENANCE_DB" "$PROVENANCE_SQL" "$PROVENANCE_HTML"
 
 if [[ "$RESOLVED_MATRIX_TYPE" == "binary" ]]; then
     STATISTICAL_TEST="chi-square"
@@ -932,6 +940,7 @@ PROVENANCE_ARGS=(
     --completed-at "$RUN_COMPLETED_AT"
     --db "$PROVENANCE_DB"
     --sql "$PROVENANCE_SQL"
+    --html "$PROVENANCE_HTML"
 )
 if [[ -n "$ABS_TAXONOMY_FILE" ]]; then
     PROVENANCE_ARGS+=(
@@ -946,11 +955,13 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import html
 import itertools
 import json
 import re
 import sqlite3
 import sys
+from urllib.parse import quote
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1005,7 +1016,7 @@ STEPS = [
     Step(10, 9, "8", "Network construction", "08_merge_filtered_files.py",
          "Merge filtered correlation edges and create node attributes, including taxonomy when supplied."),
     Step(11, 10, "9", "Workflow provenance export", "run_metguild_workflow.sh",
-         "Create the populated SQLite provenance database and complete SQL reconstruction dump."),
+         "Create the populated SQLite provenance database, complete SQL reconstruction dump, and lineage-first browser HTML report."),
 ]
 
 STEP_BY_ORDER = {step.order_no: step for step in STEPS}
@@ -1033,7 +1044,7 @@ for upstream in range(0, 10):
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build MetGuild workflow provenance SQLite/SQL outputs.")
+    parser = argparse.ArgumentParser(description="Build MetGuild workflow provenance SQLite/SQL/HTML outputs.")
     parser.add_argument("--run-dir", required=True)
     parser.add_argument("--original-input", required=True)
     parser.add_argument("--working-input", required=True)
@@ -1048,6 +1059,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--completed-at", required=True)
     parser.add_argument("--db", required=True)
     parser.add_argument("--sql", required=True)
+    parser.add_argument("--html", required=True)
     return parser.parse_args()
 
 
@@ -1094,6 +1106,8 @@ def classify_type(path: Path) -> str:
         return "manifest" if "manifests" in parts else "summary_json"
     if suffix in {".png", ".svg", ".pdf", ".jpg", ".jpeg"}:
         return "plot_or_figure"
+    if suffix == ".html" and "08_workflow_provenance" in parts:
+        return "provenance_html"
     if suffix == ".html":
         return "interactive_plot"
     if suffix in {".log", ".out", ".err"}:
@@ -1141,7 +1155,7 @@ def step_id_for_order(order: int | None) -> int | None:
     return STEP_BY_ORDER[order].step_id if order in STEP_BY_ORDER else None
 
 
-def scan_artifacts(args: argparse.Namespace, run_dir: Path, db_path: Path, sql_path: Path) -> list[Artifact]:
+def scan_artifacts(args: argparse.Namespace, run_dir: Path, db_path: Path, sql_path: Path, html_path: Path) -> list[Artifact]:
     artifacts: list[Artifact] = []
     next_id = 1
 
@@ -1160,7 +1174,7 @@ def scan_artifacts(args: argparse.Namespace, run_dir: Path, db_path: Path, sql_p
     if args.original_taxonomy:
         add_external(args.original_taxonomy, "external_taxonomy")
 
-    excluded = {db_path.resolve(), sql_path.resolve()}
+    excluded = {db_path.resolve(), sql_path.resolve(), html_path.resolve()}
     for path in sorted((p for p in run_dir.rglob("*") if p.is_file()), key=lambda p: p.relative_to(run_dir).as_posix()):
         if path.resolve() in excluded:
             continue
@@ -1178,7 +1192,11 @@ def scan_artifacts(args: argparse.Namespace, run_dir: Path, db_path: Path, sql_p
         next_id += 1
 
     # Self-referential provenance outputs are represented without checksum/size.
-    for path, kind in ((db_path, "sqlite_database"), (sql_path, "database_sql")):
+    for path, kind in (
+        (db_path, "sqlite_database"),
+        (sql_path, "database_sql"),
+        (html_path, "provenance_html"),
+    ):
         rel = path.relative_to(run_dir).as_posix()
         artifacts.append(Artifact(
             next_id, rel, path.name, "provenance_output", kind, path.suffix.lower(),
@@ -1335,6 +1353,69 @@ def artifact_by_rel(artifacts: list[Artifact]) -> dict[str, Artifact]:
     return {a.relative_path: a for a in artifacts}
 
 
+def artifact_solution_context(relative_path: str) -> tuple[str | None, int | None]:
+    """Return (method_code, k) for a solution-specific artifact when detectable."""
+    text = Path(relative_path).as_posix()
+
+    match = re.search(r"/(01_kmeans|02_hierarchical)/(\d+)_clusters(?:/|$)", "/" + text)
+    if match:
+        method = "KM" if match.group(1) == "01_kmeans" else "HC"
+        return method, int(match.group(2))
+
+    match = re.search(r"(?:^|[/_])(\d+)_(KM|HC)(?=[_./-]|$)", text, flags=re.IGNORECASE)
+    if match:
+        return match.group(2).upper(), int(match.group(1))
+
+    match = re.search(r"(?:^|[/_])(KM|HC)(\d+)(?=[_./-]|$)", text, flags=re.IGNORECASE)
+    if match:
+        return match.group(1).upper(), int(match.group(2))
+
+    return None, None
+
+
+def context_filtered_inputs(inputs: list[Artifact], child: Artifact) -> list[Artifact]:
+    """Keep global inputs plus inputs from the same clustering method/k as child."""
+    child_method, child_k = artifact_solution_context(child.relative_path)
+    if child_method is None or child_k is None:
+        return inputs
+
+    filtered: list[Artifact] = []
+    for parent in inputs:
+        parent_method, parent_k = artifact_solution_context(parent.relative_path)
+        if parent_method is None or parent_k is None:
+            filtered.append(parent)
+        elif parent_method == child_method and parent_k == child_k:
+            filtered.append(parent)
+    return filtered
+
+
+def lineage_relation(parent: Artifact, child: Artifact) -> str:
+    parent_step = STEP_BY_ID.get(parent.producing_step_id) if parent.producing_step_id else None
+    child_step = STEP_BY_ID.get(child.producing_step_id) if child.producing_step_id else None
+    po = parent_step.order_no if parent_step else None
+    co = child_step.order_no if child_step else None
+
+    if co in {2, 3} and po == 1:
+        return "candidate_k_source"
+    if co == 4 and po in {2, 3}:
+        return "cluster_assignment_source"
+    if co == 4 and po == 0:
+        return "taxonomy_source"
+    if co == 5 and po == 1:
+        return "feature_matrix_source"
+    if co == 5 and po in {2, 3}:
+        return "cluster_assignment_source"
+    if co in {6, 7, 8} and po == 5:
+        return "retained_feature_source"
+    if co == 9 and po in {6, 7, 8}:
+        return "filtered_correlation_source"
+    if co == 9 and po == 4:
+        return "taxonomy_annotation_source"
+    if co == 10:
+        return "indexed_by_provenance"
+    return "used_to_generate"
+
+
 def data_artifacts_for_step(artifacts: list[Artifact], order: int) -> list[Artifact]:
     step_id = STEP_BY_ORDER[order].step_id
     return [a for a in artifacts if a.producing_step_id == step_id and a.artifact_role != "script"]
@@ -1409,10 +1490,11 @@ def link_artifacts(con: sqlite3.Connection, artifacts: list[Artifact], args: arg
         script = rel.get("scripts/" + step.script_name) if step.script_name else None
         outputs = data_artifacts_for_step(artifacts, step.order_no)
         for child in outputs:
-            for parent in inputs:
+            child_inputs = context_filtered_inputs(inputs, child)
+            for parent in child_inputs:
                 if parent.artifact_id != child.artifact_id:
                     con.execute("INSERT OR IGNORE INTO artifact_dependencies VALUES (?,?,?)",
-                                (parent.artifact_id, child.artifact_id, "used_to_generate"))
+                                (parent.artifact_id, child.artifact_id, lineage_relation(parent, child)))
             if script and script.artifact_id != child.artifact_id:
                 con.execute("INSERT OR IGNORE INTO artifact_dependencies VALUES (?,?,?)",
                             (script.artifact_id, child.artifact_id, "generated_by_script"))
@@ -1722,18 +1804,875 @@ def dump_database(con: sqlite3.Connection, destination: Path) -> None:
     temporary.replace(destination)
 
 
+def html_text(value: Any) -> str:
+    return html.escape("" if value is None else str(value), quote=True)
+
+
+def human_bytes(value: Any) -> str:
+    if value is None:
+        return ""
+    try:
+        size = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    units = ["B", "KB", "MB", "GB", "TB"]
+    for unit in units:
+        if abs(size) < 1024 or unit == units[-1]:
+            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024
+    return str(value)
+
+
+def local_artifact_href(relative_path: str, is_external: int) -> str | None:
+    if is_external:
+        return None
+    # The report lives in run_dir/08_workflow_provenance; ../ returns to run_dir.
+    return "../" + quote(relative_path, safe="/._-~")
+
+
+def table_html(headers: Sequence[str], rows: Sequence[Sequence[Any]], *, table_id: str = "", link_path_index: int | None = None, external_index: int | None = None) -> str:
+    id_attr = f' id="{html_text(table_id)}"' if table_id else ""
+    out = [f"<div class=\"table-wrap\"><table{id_attr}><thead><tr>"]
+    out.extend(f"<th>{html_text(h)}</th>" for h in headers)
+    out.append("</tr></thead><tbody>")
+    for row in rows:
+        out.append("<tr>")
+        for idx, value in enumerate(row):
+            rendered = html_text(value)
+            if link_path_index is not None and idx == link_path_index and value not in (None, ""):
+                is_external = int(row[external_index]) if external_index is not None and row[external_index] is not None else 0
+                href = local_artifact_href(str(value), is_external)
+                if href:
+                    rendered = f'<a href="{html_text(href)}">{rendered}</a>'
+            out.append(f"<td>{rendered}</td>")
+        out.append("</tr>")
+    out.append("</tbody></table></div>")
+    return "".join(out)
+
+
+def read_network_summary(run_dir: Path) -> tuple[list[str], list[list[str]]]:
+    path = run_dir / "07_network_construction" / "01_edge_list_merge_summary.csv"
+    if not path.is_file():
+        return [], []
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.reader(handle)
+        rows = list(reader)
+    if not rows:
+        return [], []
+    return [str(x) for x in rows[0]], [[str(x) for x in row] for row in rows[1:]]
+
+
+def read_candidate_k(run_dir: Path) -> str:
+    path = run_dir / "manifests" / "optimal_k_values.json"
+    if not path.is_file():
+        return ""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    values = data.get("unique_k_values")
+    if isinstance(values, list):
+        return ", ".join(str(x) for x in values)
+    return ""
+
+
+def generate_html_report(con: sqlite3.Connection, destination: Path, run_dir: Path) -> None:
+    run = con.execute(
+        """
+        SELECT dataset_name, original_input_path, original_taxonomy_path, run_directory,
+               max_k, matrix_type, statistical_test, candidate_source, requested_distance,
+               started_at, completed_at, status
+        FROM workflow_runs WHERE run_id = 1
+        """
+    ).fetchone()
+    if run is None:
+        raise RuntimeError("workflow_runs contains no run record; cannot build HTML provenance report")
+
+    dataset_name, original_input, original_taxonomy, run_directory, max_k, matrix_type, statistical_test, candidate_source, requested_distance, started_at, completed_at, status = run
+
+    step_rows = con.execute(
+        """
+        SELECT step_id, workflow_order, step_label, step_name, description
+        FROM workflow_steps
+        WHERE workflow_order < 10
+        ORDER BY workflow_order
+        """
+    ).fetchall()
+    steps = [
+        {
+            "id": int(step_id),
+            "number": int(order_no),
+            "label": str(label),
+            "name": str(name),
+            "description": str(description),
+        }
+        for step_id, order_no, label, name, description in step_rows
+    ]
+    source_step = {
+        "id": 0,
+        "number": -1,
+        "label": "source",
+        "name": "Original source files",
+        "description": "Original matrix and taxonomy files supplied to the workflow before staging.",
+    }
+    step_by_id = {item["id"]: item for item in steps}
+
+    # Imported table dimensions are already catalogued in SQLite.  Reuse them
+    # rather than recounting large workflow outputs while building the report.
+    table_dimensions = {
+        int(artifact_id): (int(row_count), int(column_count))
+        for artifact_id, row_count, column_count in con.execute(
+            """
+            SELECT artifact_id, row_count, column_count
+            FROM dataset_tables
+            WHERE import_status = 'imported'
+            """
+        ).fetchall()
+    }
+
+    artifact_rows = con.execute(
+        """
+        SELECT artifact_id, relative_path, artifact_name, artifact_role, artifact_type,
+               size_bytes, COALESCE(sha256,''), COALESCE(modified_at,''),
+               producing_step_id, is_external
+        FROM artifacts
+        ORDER BY artifact_id
+        """
+    ).fetchall()
+
+    def result_type(kind: str) -> str | None:
+        if kind == "table":
+            return "table"
+        if kind == "plot_or_figure":
+            return "figure"
+        if kind == "interactive_plot":
+            return "interactive_plot"
+        if kind in {"manifest", "summary_json", "text"}:
+            return "metadata"
+        return None
+
+    def artifact_path(relative_path: str, is_external: int) -> Path:
+        p = Path(relative_path)
+        return p if is_external or p.is_absolute() else run_dir / p
+
+    def subtype_for(path: str, kind: str, step_order: int) -> str:
+        lower = path.lower()
+        if kind == "figure":
+            return "Figure"
+        if kind == "interactive_plot":
+            return "Interactive visualization"
+        if kind == "metadata":
+            if "optimal_k" in lower or "manifest" in lower:
+                return "Candidate-k metadata"
+            if "summary" in lower:
+                return "Summary metadata"
+            return "Metadata"
+        if step_order == 0:
+            return "Input table"
+        if step_order == 1:
+            if "score" in lower:
+                return "Candidate-k scores"
+            if "clean" in lower:
+                return "Cleaned feature matrix"
+            return "Preprocessing table"
+        if step_order in {2, 3}:
+            return "Cluster assignments"
+        if step_order == 4:
+            return "Taxonomy annotation"
+        if step_order == 5:
+            if "significant" in lower or "_sig" in lower:
+                return "Retained features"
+            return "Statistical screening"
+        if step_order == 6:
+            return "Feature-feature correlation"
+        if step_order == 7:
+            return "Feature-cluster correlation"
+        if step_order == 8:
+            return "Cluster-cluster correlation"
+        if step_order == 9:
+            if "edge" in lower:
+                return "Network edge list"
+            if "node" in lower:
+                return "Network node attributes"
+            return "Network output"
+        return "Result"
+
+    def read_table_preview(path: Path, limit_rows: int = 30, limit_columns: int = 80) -> tuple[list[str], list[list[str]], str | None, bool]:
+        try:
+            with path.open("r", encoding="utf-8-sig", errors="replace", newline="") as handle:
+                sample = handle.read(65536)
+                handle.seek(0)
+                if path.suffix.lower() == ".tsv":
+                    delimiter = "\t"
+                else:
+                    try:
+                        delimiter = csv.Sniffer().sniff(sample, delimiters=",\t;|").delimiter
+                    except csv.Error:
+                        delimiter = ","
+                reader = csv.reader(handle, delimiter=delimiter)
+                try:
+                    header = [str(x) for x in next(reader)]
+                except StopIteration:
+                    return [], [], None, False
+                truncated_columns = len(header) > limit_columns
+                display_header = header[:limit_columns]
+                rows: list[list[str]] = []
+                for row in itertools.islice(reader, limit_rows):
+                    values = [str(x) for x in row[:limit_columns]]
+                    if len(values) < len(display_header):
+                        values.extend([""] * (len(display_header) - len(values)))
+                    rows.append(values)
+                return display_header, rows, None, truncated_columns
+        except Exception as exc:
+            return [], [], str(exc), False
+
+    def read_metadata_preview(path: Path, max_chars: int = 12000) -> str:
+        try:
+            if path.suffix.lower() == ".json":
+                value = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
+                text_value = json.dumps(value, indent=2, ensure_ascii=False)
+            else:
+                text_value = path.read_text(encoding="utf-8-sig", errors="replace")
+            return text_value[:max_chars] + ("\n… preview truncated …" if len(text_value) > max_chars else "")
+        except Exception as exc:
+            return f"Preview error: {exc}"
+
+    nodes: list[dict[str, Any]] = []
+    artifact_to_node: dict[int, str] = {}
+    for artifact_id, relative_path, artifact_name, role, artifact_type, size_bytes, sha256, modified_at, producing_step_id, is_external in artifact_rows:
+        ui_type = result_type(str(artifact_type))
+        if ui_type is None:
+            continue
+        # Keep the graph focused on scientific workflow products, not the provenance
+        # report itself.  External input/taxonomy artifacts are retained as explicit
+        # source nodes so a lineage can reach the files supplied before staging.
+        if int(is_external):
+            step = source_step
+        else:
+            step = step_by_id.get(int(producing_step_id)) if producing_step_id is not None else None
+        if step is None or step["number"] >= 10:
+            continue
+        method, clusters = artifact_solution_context(str(relative_path))
+        source_path = artifact_path(str(relative_path), int(is_external))
+        row_count, column_count = table_dimensions.get(int(artifact_id), (None, None))
+        columns: list[str] = []
+        preview_rows: list[list[str]] = []
+        preview_error: str | None = None
+        preview_text = ""
+        preview_columns_truncated = False
+        if not int(is_external) and ui_type == "table" and source_path.is_file():
+            columns, preview_rows, preview_error, preview_columns_truncated = read_table_preview(source_path)
+        elif not int(is_external) and ui_type == "metadata" and source_path.is_file():
+            preview_text = read_metadata_preview(source_path)
+
+        node_id = f"R{int(artifact_id):04d}"
+        artifact_to_node[int(artifact_id)] = node_id
+        nodes.append({
+            "id": node_id,
+            "artifact_id": int(artifact_id),
+            "step": int(step["number"]),
+            "step_label": str(step["label"]),
+            "step_name": str(step["name"]),
+            "step_description": str(step["description"]),
+            "name": str(artifact_name),
+            "relative_path": str(relative_path),
+            "href": local_artifact_href(str(relative_path), int(is_external)),
+            "type": ui_type,
+            "subtype": subtype_for(str(relative_path), ui_type, int(step["number"])),
+            "method": method or "",
+            "clusters": clusters,
+            "size_bytes": int(size_bytes) if size_bytes is not None else None,
+            "sha256": str(sha256),
+            "modified_at": str(modified_at),
+            "row_count": row_count,
+            "column_count": column_count,
+            "columns": columns,
+            "preview_rows": preview_rows,
+            "preview_error": preview_error,
+            "preview_text": preview_text,
+            "preview_columns_truncated": preview_columns_truncated,
+        })
+
+    edges: list[dict[str, Any]] = []
+    edge_keys: set[tuple[str, str, str]] = set()
+    for parent_id, child_id, relation in con.execute(
+        """
+        SELECT parent_artifact_id, child_artifact_id, relation
+        FROM artifact_dependencies
+        ORDER BY child_artifact_id, parent_artifact_id, relation
+        """
+    ).fetchall():
+        parent = artifact_to_node.get(int(parent_id))
+        child = artifact_to_node.get(int(child_id))
+        if not parent or not child or parent == child:
+            continue
+        key = (parent, child, str(relation))
+        if key in edge_keys:
+            continue
+        edge_keys.add(key)
+        edges.append({"from": parent, "to": child, "relation": str(relation)})
+
+    # Figures and interactive plots are often sibling outputs of the same analysis
+    # rather than explicit children in the file-level provenance graph.  Add a
+    # visualization link to the closest table from the same step/method/k so the
+    # browser map makes those relationships visible without changing SQLite lineage.
+    by_context: dict[tuple[int, str, int | None], list[dict[str, Any]]] = {}
+    for node in nodes:
+        by_context.setdefault((node["step"], node["method"], node["clusters"]), []).append(node)
+
+    def token_prefix_score(a: str, b: str) -> tuple[int, int]:
+        ta = re.split(r"[^A-Za-z0-9]+", Path(a).stem.lower())
+        tb = re.split(r"[^A-Za-z0-9]+", Path(b).stem.lower())
+        common = 0
+        for x, y in zip(ta, tb):
+            if x != y:
+                break
+            common += 1
+        return common, -abs(len(ta) - len(tb))
+
+    for context_nodes in by_context.values():
+        tables = [n for n in context_nodes if n["type"] == "table"]
+        visuals = [n for n in context_nodes if n["type"] in {"figure", "interactive_plot"}]
+        if not tables:
+            continue
+        for visual in visuals:
+            parent = max(tables, key=lambda t: token_prefix_score(t["name"], visual["name"]))
+            key = (parent["id"], visual["id"], "visualizes_or_summarizes")
+            if key not in edge_keys:
+                edge_keys.add(key)
+                edges.append({"from": parent["id"], "to": visual["id"], "relation": "visualizes_or_summarizes"})
+
+    workflow_data = {
+        "run": {
+            "dataset": str(dataset_name),
+            "input_file": Path(str(original_input)).name,
+            "taxonomy_file": Path(str(original_taxonomy)).name if original_taxonomy else "",
+            "max_k": int(max_k),
+            "matrix_type": str(matrix_type),
+            "statistical_test": str(statistical_test),
+            "candidate_source": str(candidate_source),
+            "requested_distance": str(requested_distance),
+            "started_at": str(started_at),
+            "completed_at": str(completed_at),
+            "status": str(status),
+            "run_directory": str(run_directory),
+        },
+        "nodes": nodes,
+        "edges": edges,
+        "steps": [
+            {
+                "number": int(s["number"]),
+                "label": str(s["label"]),
+                "name": str(s["name"]),
+                "description": str(s["description"]),
+            }
+            for s in [source_step, *steps]
+        ],
+    }
+
+    # Prevent an embedded JSON string such as </script> from terminating the data
+    # element early when a metadata preview contains arbitrary user text.
+    workflow_json = json.dumps(workflow_data, ensure_ascii=False).replace("</", "<\\/")
+
+    css = r"""
+:root {
+  color-scheme: light dark;
+  --bg: #f3f5f8;
+  --panel: #ffffff;
+  --text: #17202a;
+  --muted: #5d6d7e;
+  --border: #d8dee8;
+  --accent: #2c5cc5;
+  --accent-soft: #e8efff;
+  --table: #0f766e;
+  --figure: #a16207;
+  --interactive: #7e22ce;
+  --metadata: #475569;
+  --edge: #8793a5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #10141b;
+    --panel: #171d26;
+    --text: #eef2f7;
+    --muted: #aab4c2;
+    --border: #303947;
+    --accent: #7aa2ff;
+    --accent-soft: #243352;
+    --table: #4fd1c5;
+    --figure: #f6c453;
+    --interactive: #c084fc;
+    --metadata: #a8b4c5;
+    --edge: #697789;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+header { padding: 20px 24px 16px; background: var(--panel); border-bottom: 1px solid var(--border); }
+h1 { margin: 0 0 6px; font-size: clamp(1.35rem, 3vw, 2rem); }
+.run-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; color: var(--muted); font-size: 0.9rem; }
+.controls { display: grid; grid-template-columns: minmax(180px, 1fr) repeat(4, minmax(130px, 180px)) auto auto; gap: 10px; padding: 12px 24px; background: var(--panel); border-bottom: 1px solid var(--border); align-items: end; }
+.control { min-width: 0; }
+.control label { display: block; color: var(--muted); font-size: 0.75rem; margin-bottom: 4px; }
+input, select, button { width: 100%; min-height: 40px; font: inherit; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); padding: 8px 10px; }
+button { cursor: pointer; width: auto; min-width: 42px; }
+button:hover, button:focus-visible { border-color: var(--accent); outline: none; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 440px); gap: 0; min-height: 720px; }
+.graph-panel { min-width: 0; border-right: 1px solid var(--border); }
+.graph-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.82rem; color: var(--muted); align-items: center; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; background: var(--legend-color); }
+.graph-scroll { overflow: auto; height: 700px; background-image: radial-gradient(var(--border) 0.7px, transparent 0.7px); background-size: 18px 18px; }
+#graph { display: block; min-width: 100%; }
+.node { cursor: pointer; }
+.node rect { fill: var(--panel); stroke-width: 2; rx: 10; }
+.node.table rect { stroke: var(--table); }
+.node.figure rect { stroke: var(--figure); }
+.node.interactive_plot rect { stroke: var(--interactive); }
+.node.metadata rect { stroke: var(--metadata); }
+.node.selected rect { stroke: var(--accent); stroke-width: 4; filter: drop-shadow(0 3px 5px rgba(0,0,0,.18)); }
+.node.lineage-related rect { stroke-width: 3; }
+.node text { pointer-events: none; fill: var(--text); }
+.node .node-title { font-weight: 700; font-size: 12px; }
+.node .node-meta { font-size: 10px; fill: var(--muted); }
+.step-label { font-weight: 800; font-size: 13px; fill: var(--text); }
+.step-description { font-size: 10px; fill: var(--muted); }
+.edge { stroke: var(--edge); stroke-width: 1.5; fill: none; opacity: 0.48; marker-end: url(#arrow); }
+.edge.highlight { stroke: var(--accent); stroke-width: 3; opacity: 1; }
+.details { min-width: 0; background: var(--panel); padding: 18px; overflow: auto; height: 756px; }
+.details h2 { margin: 0 0 8px; font-size: 1.15rem; word-break: break-word; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.badge { border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; color: var(--muted); font-size: 0.75rem; }
+.detail-grid { display: grid; grid-template-columns: 110px minmax(0,1fr); gap: 7px 10px; font-size: 0.84rem; margin: 12px 0; }
+.detail-grid dt { color: var(--muted); }
+.detail-grid dd { margin: 0; overflow-wrap: anywhere; }
+.action-link { display: inline-block; margin: 6px 8px 10px 0; padding: 8px 11px; border-radius: 8px; background: var(--accent); color: white; text-decoration: none; }
+.relationships { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.relationships h3, .preview h3 { font-size: 0.9rem; margin: 0 0 7px; }
+.relation-list { border: 1px solid var(--border); border-radius: 8px; padding: 8px; min-height: 54px; }
+.relation-list button { display: block; width: 100%; text-align: left; margin-bottom: 5px; font-size: 0.78rem; min-height: 34px; }
+.preview { margin-top: 14px; }
+.preview img { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; background: white; }
+.table-wrap { overflow: auto; max-height: 390px; border: 1px solid var(--border); border-radius: 8px; }
+table { border-collapse: collapse; width: max-content; min-width: 100%; font-size: 0.75rem; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+th { position: sticky; top: 0; background: var(--panel); z-index: 1; text-align: left; }
+pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow: auto; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); font-size: 0.75rem; }
+.empty { color: var(--muted); padding: 20px; text-align: center; }
+.summary-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.summary-card { border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; font-size: 0.78rem; color: var(--muted); }
+.trace-note { margin: 0 24px 12px; color: var(--muted); font-size: .82rem; }
+@media (max-width: 980px) {
+  .controls { grid-template-columns: 1fr 1fr; }
+  .layout { grid-template-columns: 1fr; }
+  .graph-panel { border-right: 0; border-bottom: 1px solid var(--border); }
+  .graph-scroll { height: 520px; }
+  .details { height: auto; min-height: 440px; }
+}
+@media (max-width: 560px) {
+  header, .controls { padding-left: 12px; padding-right: 12px; }
+  .controls { grid-template-columns: 1fr; }
+  .relationships { grid-template-columns: 1fr; }
+}
+"""
+
+    js = r"""
+(() => {
+  const rootData = JSON.parse(document.getElementById('workflowData').textContent);
+  const nodesById = new Map(rootData.nodes.map(node => [node.id, node]));
+  const incoming = new Map();
+  const outgoing = new Map();
+  rootData.nodes.forEach(node => { incoming.set(node.id, []); outgoing.set(node.id, []); });
+  rootData.edges.forEach(edge => {
+    if (incoming.has(edge.to)) incoming.get(edge.to).push(edge);
+    if (outgoing.has(edge.from)) outgoing.get(edge.from).push(edge);
+  });
+
+  const search = document.getElementById('search');
+  const stepFilter = document.getElementById('stepFilter');
+  const typeFilter = document.getElementById('typeFilter');
+  const methodFilter = document.getElementById('methodFilter');
+  const clusterFilter = document.getElementById('clusterFilter');
+  const svg = document.getElementById('graph');
+  const edgesGroup = document.getElementById('edges');
+  const nodesGroup = document.getElementById('nodes');
+  const details = document.getElementById('details');
+  const summaryCards = document.getElementById('summaryCards');
+  let selectedId = null;
+  let zoom = 1;
+  let baseWidth = 1200;
+  let baseHeight = 700;
+
+  const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  const formatBytes = bytes => {
+    if (!Number.isFinite(bytes)) return 'Unknown';
+    const units = ['B','KB','MB','GB'];
+    let value = bytes;
+    let index = 0;
+    while (value >= 1024 && index < units.length - 1) { value /= 1024; index += 1; }
+    return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+  };
+  const shortName = name => name.length > 38 ? `${name.slice(0, 35)}…` : name;
+
+  function collectAncestors(seedIds) {
+    const result = new Set(seedIds);
+    const stack = [...seedIds];
+    while (stack.length) {
+      const id = stack.pop();
+      (incoming.get(id) || []).forEach(edge => {
+        if (!result.has(edge.from)) { result.add(edge.from); stack.push(edge.from); }
+      });
+    }
+    return result;
+  }
+
+  function collectConnected(seedId) {
+    const nodes = new Set([seedId]);
+    const edges = new Set();
+    const up = [seedId];
+    const down = [seedId];
+    while (up.length) {
+      const id = up.pop();
+      (incoming.get(id) || []).forEach(edge => {
+        const key = `${edge.from}|${edge.to}|${edge.relation}`;
+        edges.add(key);
+        if (!nodes.has(edge.from)) { nodes.add(edge.from); up.push(edge.from); }
+      });
+    }
+    while (down.length) {
+      const id = down.pop();
+      (outgoing.get(id) || []).forEach(edge => {
+        const key = `${edge.from}|${edge.to}|${edge.relation}`;
+        edges.add(key);
+        if (!nodes.has(edge.to)) { nodes.add(edge.to); down.push(edge.to); }
+      });
+    }
+    return {nodes, edges};
+  }
+
+  function fillFilters() {
+    rootData.steps.forEach(step => {
+      const option = document.createElement('option');
+      option.value = String(step.number);
+      option.textContent = `${step.label}. ${step.name}`;
+      stepFilter.appendChild(option);
+    });
+    [...new Set(rootData.nodes.map(n => n.type))].sort().forEach(value => {
+      const option = document.createElement('option'); option.value = value; option.textContent = value.replaceAll('_', ' '); typeFilter.appendChild(option);
+    });
+    [...new Set(rootData.nodes.map(n => n.method).filter(Boolean))].sort().forEach(value => {
+      const option = document.createElement('option'); option.value = value; option.textContent = value === 'KM' ? 'KMeans' : value === 'HC' ? 'Hierarchical' : value; methodFilter.appendChild(option);
+    });
+    [...new Set(rootData.nodes.map(n => n.clusters).filter(v => v !== null))].sort((a,b) => a-b).forEach(value => {
+      const option = document.createElement('option'); option.value = String(value); option.textContent = String(value); clusterFilter.appendChild(option);
+    });
+  }
+
+  function currentNodes() {
+    const query = search.value.trim().toLowerCase();
+    const method = methodFilter.value;
+    const cluster = clusterFilter.value;
+
+    let contextIds = null;
+    if (method || cluster) {
+      const seeds = rootData.nodes.filter(node => {
+        if (method && node.method !== method) return false;
+        if (cluster && String(node.clusters) !== cluster) return false;
+        return Boolean(node.method || node.clusters !== null);
+      }).map(node => node.id);
+      contextIds = collectAncestors(seeds);
+      seeds.forEach(id => contextIds.add(id));
+    }
+
+    return rootData.nodes.filter(node => {
+      if (contextIds && !contextIds.has(node.id)) return false;
+      if (stepFilter.value && String(node.step) !== stepFilter.value) return false;
+      if (typeFilter.value && node.type !== typeFilter.value) return false;
+      if (query) {
+        const haystack = [node.name, node.relative_path, node.type, node.subtype, node.method, node.step_name, node.step_label, node.clusters].join(' ').toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      return true;
+    });
+  }
+
+  function applyZoom() {
+    svg.style.width = `${baseWidth * zoom}px`;
+    svg.style.height = `${baseHeight * zoom}px`;
+  }
+
+  function renderGraph() {
+    const visible = currentNodes();
+    const visibleIds = new Set(visible.map(node => node.id));
+    const grouped = new Map();
+    visible.forEach(node => {
+      if (!grouped.has(node.step)) grouped.set(node.step, []);
+      grouped.get(node.step).push(node);
+    });
+    grouped.forEach(values => values.sort((a,b) => a.relative_path.localeCompare(b.relative_path)));
+
+    const activeSteps = [...grouped.keys()].sort((a,b) => a-b);
+    const xGap = 320;
+    const yGap = 96;
+    const nodeWidth = 278;
+    const nodeHeight = 70;
+    const positions = new Map();
+    let maxRows = 1;
+
+    activeSteps.forEach((step, stepIndex) => {
+      const list = grouped.get(step);
+      maxRows = Math.max(maxRows, list.length);
+      list.forEach((node, rowIndex) => {
+        positions.set(node.id, {x: 30 + stepIndex * xGap, y: 82 + rowIndex * yGap});
+      });
+    });
+
+    baseWidth = Math.max(900, 70 + Math.max(activeSteps.length, 1) * xGap);
+    baseHeight = Math.max(650, 130 + maxRows * yGap);
+    svg.setAttribute('viewBox', `0 0 ${baseWidth} ${baseHeight}`);
+    applyZoom();
+    edgesGroup.innerHTML = '';
+    nodesGroup.innerHTML = '';
+
+    const lineage = selectedId ? collectConnected(selectedId) : {nodes:new Set(), edges:new Set()};
+
+    rootData.edges.forEach(edge => {
+      if (!visibleIds.has(edge.from) || !visibleIds.has(edge.to)) return;
+      const from = positions.get(edge.from);
+      const to = positions.get(edge.to);
+      if (!from || !to) return;
+      const x1 = from.x + nodeWidth;
+      const y1 = from.y + nodeHeight / 2;
+      const x2 = to.x;
+      const y2 = to.y + nodeHeight / 2;
+      let d;
+      if (Math.abs(x2 - x1) < 24) {
+        const loopX = Math.max(x1, x2) + 50;
+        d = `M ${x1} ${y1} C ${loopX} ${y1}, ${loopX} ${y2}, ${x2} ${y2}`;
+      } else {
+        const bend = Math.max(45, Math.abs(x2 - x1) / 2);
+        const sign = x2 >= x1 ? 1 : -1;
+        d = `M ${x1} ${y1} C ${x1 + sign*bend} ${y1}, ${x2 - sign*bend} ${y2}, ${x2} ${y2}`;
+      }
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      const edgeKey = `${edge.from}|${edge.to}|${edge.relation}`;
+      path.setAttribute('class', `edge${lineage.edges.has(edgeKey) ? ' highlight' : ''}`);
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = edge.relation.replaceAll('_',' ');
+      path.appendChild(title);
+      edgesGroup.appendChild(path);
+    });
+
+    activeSteps.forEach((step, stepIndex) => {
+      const x = 30 + stepIndex * xGap;
+      const info = rootData.steps.find(item => item.number === step);
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      title.setAttribute('x', x); title.setAttribute('y', 28); title.setAttribute('class', 'step-label');
+      title.textContent = info ? `${info.label}. ${info.name}` : `Step ${step}`;
+      nodesGroup.appendChild(title);
+      const description = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      description.setAttribute('x', x); description.setAttribute('y', 47); description.setAttribute('class', 'step-description');
+      description.textContent = info ? shortName(info.description) : '';
+      nodesGroup.appendChild(description);
+    });
+
+    visible.forEach(node => {
+      const pos = positions.get(node.id);
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      const related = lineage.nodes.has(node.id) && node.id !== selectedId ? ' lineage-related' : '';
+      group.setAttribute('class', `node ${node.type}${node.id === selectedId ? ' selected' : ''}${related}`);
+      group.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+      group.setAttribute('tabindex', '0');
+      group.setAttribute('role', 'button');
+      group.setAttribute('aria-label', `${node.name}, ${node.type}, step ${node.step_label}`);
+
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('width', nodeWidth); rect.setAttribute('height', nodeHeight); group.appendChild(rect);
+
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      title.setAttribute('x', 12); title.setAttribute('y', 24); title.setAttribute('class', 'node-title');
+      title.textContent = shortName(node.name); group.appendChild(title);
+
+      const meta = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      meta.setAttribute('x', 12); meta.setAttribute('y', 44); meta.setAttribute('class', 'node-meta');
+      const parts = [node.type.replaceAll('_',' ')];
+      if (node.method) parts.push(node.method);
+      if (node.clusters !== null) parts.push(`k=${node.clusters}`);
+      if (node.row_count !== null) parts.push(`${node.row_count} rows`);
+      meta.textContent = parts.join(' • '); group.appendChild(meta);
+
+      const pathText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      pathText.setAttribute('x', 12); pathText.setAttribute('y', 60); pathText.setAttribute('class', 'node-meta');
+      pathText.textContent = shortName(node.relative_path); group.appendChild(pathText);
+
+      const activate = () => selectNode(node.id);
+      group.addEventListener('click', activate);
+      group.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); }
+      });
+      nodesGroup.appendChild(group);
+    });
+
+    const visibleEdges = rootData.edges.filter(e => visibleIds.has(e.from) && visibleIds.has(e.to)).length;
+    summaryCards.innerHTML = `<span class="summary-card">${visible.length} visible results</span><span class="summary-card">${visibleEdges} visible connections</span>`;
+  }
+
+  function relationButton(edge, direction) {
+    const targetId = direction === 'in' ? edge.from : edge.to;
+    const target = nodesById.get(targetId);
+    if (!target) return '';
+    return `<button type="button" data-node-id="${escapeHtml(targetId)}"><strong>${escapeHtml(target.name)}</strong><br><span>${escapeHtml(edge.relation.replaceAll('_',' '))}</span></button>`;
+  }
+
+  function renderPreview(node) {
+    if (node.type === 'table') {
+      if (node.preview_error) return `<p>Preview error: ${escapeHtml(node.preview_error)}</p>`;
+      if (!node.columns.length) return '<p>No preview rows were available.</p>';
+      const head = node.columns.map(column => `<th>${escapeHtml(column)}</th>`).join('');
+      const body = node.preview_rows.map(row => `<tr>${row.map(value => `<td title="${escapeHtml(value)}">${escapeHtml(value)}</td>`).join('')}</tr>`).join('');
+      const columnNote = node.preview_columns_truncated ? ' Columns are limited in this inline preview.' : '';
+      return `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div><p class="badge">Preview limited to the first 30 rows.${columnNote}</p>`;
+    }
+    if (node.type === 'figure') {
+      if (/\.pdf$/i.test(node.name)) return `<p>PDF preview is not embedded. Open the file using the button above.</p>`;
+      return `<img src="${escapeHtml(node.href)}" alt="Preview of ${escapeHtml(node.name)}">`;
+    }
+    if (node.type === 'interactive_plot') {
+      return `<p>This result is an interactive HTML visualization. Open it in a new browser tab using the button above.</p>`;
+    }
+    if (node.type === 'metadata') {
+      return `<pre>${escapeHtml(node.preview_text || 'No metadata preview available.')}</pre>`;
+    }
+    return '<p>No inline preview is available for this file type.</p>';
+  }
+
+  function selectNode(id) {
+    selectedId = id;
+    const node = nodesById.get(id);
+    if (!node) return;
+    const inEdges = incoming.get(id) || [];
+    const outEdges = outgoing.get(id) || [];
+    details.innerHTML = `
+      <h2>${escapeHtml(node.name)}</h2>
+      <div class="badges">
+        <span class="badge">Step ${escapeHtml(node.step_label)}: ${escapeHtml(node.step_name)}</span>
+        <span class="badge">${escapeHtml(node.type.replaceAll('_',' '))}</span>
+        <span class="badge">${escapeHtml(node.subtype)}</span>
+        ${node.method ? `<span class="badge">${escapeHtml(node.method)}</span>` : ''}
+        ${node.clusters !== null ? `<span class="badge">k=${node.clusters}</span>` : ''}
+      </div>
+      ${node.href ? `<a class="action-link" href="${escapeHtml(node.href)}" target="_blank" rel="noopener">Open original result</a>` : ''}
+      <dl class="detail-grid">
+        <dt>Path</dt><dd>${escapeHtml(node.relative_path)}</dd>
+        <dt>File size</dt><dd>${formatBytes(node.size_bytes)}</dd>
+        <dt>Rows</dt><dd>${node.row_count === null ? 'Not applicable or unknown' : node.row_count}</dd>
+        <dt>Columns</dt><dd>${node.column_count === null ? 'Not applicable or unknown' : node.column_count}</dd>
+        <dt>SHA-256</dt><dd><code>${escapeHtml(node.sha256 || 'not recorded')}</code></dd>
+        <dt>Description</dt><dd>${escapeHtml(node.step_description)}</dd>
+      </dl>
+      <div class="relationships">
+        <section><h3>Inputs to this result</h3><div class="relation-list">${inEdges.length ? inEdges.map(edge => relationButton(edge, 'in')).join('') : '<span class="empty">No upstream result recorded.</span>'}</div></section>
+        <section><h3>Results produced from this</h3><div class="relation-list">${outEdges.length ? outEdges.map(edge => relationButton(edge, 'out')).join('') : '<span class="empty">No downstream result recorded.</span>'}</div></section>
+      </div>
+      <section class="preview"><h3>Result preview</h3>${renderPreview(node)}</section>`;
+    details.querySelectorAll('[data-node-id]').forEach(button => button.addEventListener('click', () => selectNode(button.dataset.nodeId)));
+    renderGraph();
+  }
+
+  document.getElementById('runMeta').innerHTML = [
+    `Dataset: <strong>${escapeHtml(rootData.run.dataset)}</strong>`,
+    `Input: <strong>${escapeHtml(rootData.run.input_file)}</strong>`,
+    `Matrix: <strong>${escapeHtml(rootData.run.matrix_type)}</strong>`,
+    `Test: <strong>${escapeHtml(rootData.run.statistical_test)}</strong>`,
+    `Completed: <strong>${escapeHtml(rootData.run.completed_at)}</strong>`
+  ].map(item => `<span>${item}</span>`).join('');
+
+  [search, stepFilter, typeFilter, methodFilter, clusterFilter].forEach(control => control.addEventListener('input', renderGraph));
+  document.getElementById('zoomIn').addEventListener('click', () => { zoom = Math.min(1.8, zoom + 0.1); applyZoom(); });
+  document.getElementById('zoomOut').addEventListener('click', () => { zoom = Math.max(0.5, zoom - 0.1); applyZoom(); });
+
+  fillFilters();
+  renderGraph();
+  if (rootData.nodes.length) selectNode(rootData.nodes[0].id);
+})();
+"""
+
+    document = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MetGuild Workflow Results Map - {html_text(dataset_name)}</title>
+<style>{css}</style>
+</head>
+<body>
+<header>
+  <h1>MetGuild Workflow Results Map</h1>
+  <div class="run-meta" id="runMeta"></div>
+</header>
+<section class="controls" aria-label="Workflow filters">
+  <div class="control"><label for="search">Search results</label><input id="search" type="search" placeholder="Filename, path, method, result type"></div>
+  <div class="control"><label for="stepFilter">Workflow step</label><select id="stepFilter"><option value="">All steps</option></select></div>
+  <div class="control"><label for="typeFilter">Result type</label><select id="typeFilter"><option value="">All types</option></select></div>
+  <div class="control"><label for="methodFilter">Method</label><select id="methodFilter"><option value="">All methods</option></select></div>
+  <div class="control"><label for="clusterFilter">Candidate k</label><select id="clusterFilter"><option value="">All candidate k values</option></select></div>
+  <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
+  <button id="zoomIn" type="button" aria-label="Zoom in">+</button>
+</section>
+<p class="trace-note">Choose a clustering method and candidate <em>k</em> to keep that solution together with the shared upstream files needed to trace it back to the input. Select any result node to highlight its complete recorded lineage.</p>
+<main class="layout">
+  <section class="graph-panel" aria-label="Interactive result lineage graph">
+    <div class="graph-toolbar">
+      <div class="legend">
+        <span style="--legend-color:var(--table)">Table</span>
+        <span style="--legend-color:var(--figure)">Figure</span>
+        <span style="--legend-color:var(--interactive)">Interactive plot</span>
+        <span style="--legend-color:var(--metadata)">JSON/metadata</span>
+      </div>
+      <div class="summary-cards" id="summaryCards"></div>
+    </div>
+    <div class="graph-scroll" id="graphScroll">
+      <svg id="graph" role="img" aria-label="MetGuild workflow graph of result tables and figures">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--edge)"></path>
+          </marker>
+        </defs>
+        <g id="edges"></g>
+        <g id="nodes"></g>
+      </svg>
+    </div>
+  </section>
+  <aside class="details" id="details" aria-live="polite">
+    <div class="empty">Select a result node to inspect its file, preview, inputs, and outputs.</div>
+  </aside>
+</main>
+<script id="workflowData" type="application/json">{workflow_json}</script>
+<script>{js}</script>
+</body>
+</html>'''
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    temporary.write_text(document, encoding="utf-8")
+    temporary.replace(destination)
+
 def main() -> int:
     args = parse_args()
     run_dir = Path(args.run_dir).resolve()
     db_path = Path(args.db).resolve()
     sql_path = Path(args.sql).resolve()
+    html_path = Path(args.html).resolve()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     if db_path.exists():
         db_path.unlink()
     if sql_path.exists():
         sql_path.unlink()
+    if html_path.exists():
+        html_path.unlink()
 
-    artifacts = scan_artifacts(args, run_dir, db_path, sql_path)
+    artifacts = scan_artifacts(args, run_dir, db_path, sql_path, html_path)
     con = sqlite3.connect(db_path)
     con.execute("PRAGMA foreign_keys = ON")
     try:
@@ -1749,6 +2688,7 @@ def main() -> int:
         create_views_and_indexes(con)
         con.commit()
         dump_database(con, sql_path)
+        generate_html_report(con, html_path, run_dir)
         print("\nProvenance import summary")
         print(f"  Imported tables:   {imported}")
         print(f"  Imported rows:     {total_rows}")
@@ -1756,6 +2696,7 @@ def main() -> int:
         print(f"  Table connections: {dependency_count}")
         print(f"  SQLite database:   {db_path}")
         print(f"  Full SQL dump:     {sql_path}")
+        print(f"  HTML browser view: {html_path}")
         return 0 if failed == 0 else 2
     finally:
         con.close()
@@ -1786,4 +2727,8 @@ echo "  Network node attributes: $OUTPUT_DIR/07_network_construction/nodes_attri
 echo "  Network validation:      passed before provenance export"
 echo "  SQLite provenance DB:    $PROVENANCE_DB"
 echo "  Full SQL dump:           $PROVENANCE_SQL"
+echo "  Browser provenance view: $PROVENANCE_HTML"
+echo ""
+echo "Open the HTML report in a browser, for example:"
+echo "  firefox $PROVENANCE_HTML"
 echo "============================================================"
