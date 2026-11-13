@@ -228,7 +228,7 @@ Edge tables contain `node1`, `node2`, signed `weight`, `abs_weight`, nonnegative
 
 Before Step 9, the runner validates the network manifest, summary, edge lists, node tables, and reported row counts. Individual solutions may be empty, but the full run must contain at least one retained edge and a populated node table. If every solution has zero retained edges, the runner stops before the SQLite/SQL/HTML export; inspect the statistical and correlation summaries to understand the empty result.
 
-Manifests record parameters, software versions, paths, and SHA-256 fingerprints. These support provenance and consistency checks; they are not digital signatures. Step 9 imports scientific CSV/TSV/JSON artifacts into a local SQLite database produces a SQL dump that can recreate it, and generates a browser-based workflow map.
+Manifests record parameters, software versions, paths, and SHA-256 fingerprints. These support provenance and consistency checks; they are not digital signatures. Step 9 imports scientific CSV/TSV/JSON artifacts into a local SQLite database, produces a SQL dump that can recreate it, and generates a browser-based workflow map.
 
 MetGuild runs locally and does not require application logins, API keys, or access tokens. Access to repository downloads and local files is handled separately by GitHub and the operating system.
 

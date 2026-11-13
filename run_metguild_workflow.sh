@@ -2748,7 +2748,19 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
     `Completed: <strong>${escapeHtml(rootData.run.completed_at)}</strong>`
   ].map(item => `<span>${item}</span>`).join('');
 
-  [search, stepFilter, typeFilter, methodFilter, clusterFilter].forEach(control => control.addEventListener('input', renderGraph));
+  function handleFilterChange() {
+    const visible = currentNodes();
+    if (selectedId && visible.some(node => node.id === selectedId)) {
+      // Refresh relationships and preview for the active filter context.
+      selectNode(selectedId);
+    } else {
+      selectedId = null;
+      details.innerHTML = '<div class="empty">Select a main result node to inspect its file, preview, inputs, and downstream outputs.</div>';
+      renderGraph();
+    }
+  }
+
+  [search, stepFilter, typeFilter, methodFilter, clusterFilter].forEach(control => control.addEventListener('input', handleFilterChange));
   document.getElementById('zoomIn').addEventListener('click', () => { zoom = Math.min(1.8, zoom + 0.1); applyZoom(); });
   document.getElementById('zoomOut').addEventListener('click', () => { zoom = Math.max(0.5, zoom - 0.1); applyZoom(); });
 
