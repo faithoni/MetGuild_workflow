@@ -1,5 +1,7 @@
 # MetGuild Workflow
 
+**Release candidate: `0.1.0-rc.1`** — prepared for validation, not a stable release. The canonical version is in [VERSION](VERSION). See [release notes](Releases.md) and the [release acceptance checklist](RELEASE_CHECKLIST.md) for tested scope and outstanding checks.
+
 A reproducible downstream workflow for defining metabolic potential guilds from functionally annotated, genome-centric metagenomic data.
 
 MetGuild cleans genome-by-feature matrices, selects candidate cluster counts, performs clustering and statistical screening, computes correlations, and exports network edge lists, node attributes, a populated provenance database, and an interactive HTML workflow map.
@@ -269,6 +271,9 @@ The report embeds its graph data and table previews, but figure previews and ori
 ```text
 MetGuild_workflow/
 ├── README.md
+├── VERSION
+├── Releases.md
+├── RELEASE_CHECKLIST.md
 ├── LICENSE
 ├── environment.yml
 ├── run_metguild_workflow.sh
