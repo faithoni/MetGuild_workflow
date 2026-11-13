@@ -321,24 +321,36 @@ Equivalent tools may be substituted when they produce compatible inputs. These t
 
 ## Benchmarking
 
-The following measurements were reported in the previous README using `/usr/bin/time -v`. They have not been rerun for the current code; the original hardware, environment, and commit were not recorded in that table.
+MetGuild was benchmarked using the two example datasets distributed with the repository. Each dataset was processed three times using the complete workflow. Runtime is reported as the median wall-clock time across the three runs. Peak memory is the largest maximum resident set size observed across the three runs, and CPU use is the median reported by GNU `time`.
 
-| Dataset | Runtime | Max memory | CPU use | Reported status |
-|---|---:|---:|---:|---|
-| `01_DSK_DB.tsv` | 19.07 s | 221 MB | 95% | Completed |
-| `02_DSK_P_DB.tsv` | 14.42 s | 218 MB | 93% | Completed |
-| `03_MAGs_KEGG_DB.tsv` | 19.78 s | 217 MB | 97% | Completed |
-| `04_MAGs_KEGG_P_DB.tsv` | 40.07 s | 229 MB | 84% | Completed |
-| `05_GSMR-KEGG_DB.tsv` | 49.01 s | 219 MB | 90% | Completed |
-| `06_PROKKA_DB.tsv` | 10 min 04.03 s | 2.90 GB | 99% | Completed |
+| Dataset                   | Dimensions | Matrix type  | Median runtime | Peak memory | Median CPU | Runs | Status    |
+| ------------------------- | ---------- | ------------ | -------------- | ----------- | ---------- | ---- | --------- |
+| `binary_matrix.csv`       | 127 × 227  | Binary       | 67.19 s        | 318.5 MiB   | 59%        | 3    | Completed |
+| `proportional_matrix.tsv` | 127 × 29   | Proportional | 52.66 s        | 318.8 MiB   | 62%        | 3    | Completed |
 
-Where GNU `time` is available, benchmark your own input with:
+Benchmark measurements were collected using GNU `/usr/bin/time -v` on the complete MetGuild workflow.
 
-```bash
-/usr/bin/time -v bash run_metguild_workflow.sh data/my_dataset.tsv 15 --matrix-type binary
+For the binary matrix:
+```typescript
+/usr/bin/time -v bash run_metguild_workflow.sh \
+  Example_dataset/binary_matrix.csv 15 \
+  --matrix-type binary
 ```
 
-Record the commit, hardware, environment, matrix dimensions, and command alongside measurements.
+For the proportional matrix:
+```typescript
+/usr/bin/time -v bash run_metguild_workflow.sh \
+  Example_dataset/proportional_matrix.tsv 15 \
+  --matrix-type proportion
+```
+
+Each command was run three times. The benchmark corresponds to Git commit:
+
+`7f03600adbf8c7ed548fd4423ee92999c2ca7c2a`
+
+The Conda environment, Python version, compute-node hardware information, raw GNU `time` measurements, workflow logs, and exit codes were recorded under `benchmarks/current_release/`.
+
+Users benchmarking their own data should record the Git commit, software environment, hardware configuration, matrix dimensions, matrix type, command, number of replicates, wall-clock runtime, peak resident memory, and CPU utilization alongside their results.
 
 ## Citation
 
