@@ -2,7 +2,7 @@
 
 A reproducible downstream workflow for defining metabolic potential guilds from functionally annotated, genome-centric metagenomic data.
 
-MetGuild cleans genome-by-feature matrices, selects candidate cluster counts, performs clustering and statistical screening, computes correlations, and exports network edge lists, node attributes, and a populated provenance database.
+MetGuild cleans genome-by-feature matrices, selects candidate cluster counts, performs clustering and statistical screening, computes correlations, and exports network edge lists, node attributes, a populated provenance database, and an interactive HTML workflow map.
 
 The code implements Phases I and II. Phase III—the interpretation of network modules as metabolic potential guilds—requires expert knowledge.
 
@@ -33,26 +33,32 @@ Activate the environment in each new shell before running MetGuild. The runner c
 
 ## Quick start
 
-Supply your own input matrix. These commands use illustrative input paths, not bundled example datasets.
+Run the bundled examples from the repository directory after activating the Conda environment.
 
-For presence/absence data:
-
-```bash
-bash run_metguild_workflow.sh data/my_dataset.tsv 15 --matrix-type binary
-```
-
-For pathway proportions in the interval [0, 1]:
+Binary presence/absence data, with taxonomy:
 
 ```bash
-bash run_metguild_workflow.sh data/pathway_proportions.tsv 15 --matrix-type proportion
+bash run_metguild_workflow.sh Example_dataset/binary_matrix.csv 15 \
+  --matrix-type binary \
+  --taxonomy Example_taxonomy.csv
 ```
 
-To include taxonomy:
+Proportional data in the interval [0, 1], with taxonomy:
+
+```bash
+bash run_metguild_workflow.sh Example_dataset/proportional_matrix.tsv 15 \
+  --matrix-type proportion \
+  --taxonomy Example_taxonomy.csv
+```
+
+Each command runs all stages, including the SQLite, SQL, and HTML provenance exports. Omit `--taxonomy Example_taxonomy.csv` to run without taxonomy annotation.
+
+For your own data, replace the matrix and taxonomy paths with matching files. For example:
 
 ```bash
 bash run_metguild_workflow.sh data/my_dataset.tsv 15 \
   --matrix-type binary \
-  --taxonomy taxonomy.csv
+  --taxonomy data/my_taxonomy.csv
 ```
 
 The workflow is non-interactive. Step 4 selects chi-square for binary matrices and ANOVA for proportional matrices from the recorded matrix type, not the input filename.
@@ -104,7 +110,7 @@ MAG003,Chloroflexota
 MAG004,Hadarchaeota
 ```
 
-Comma-, tab-, and whitespace-delimited tables are accepted. Provide one row per genome and nonempty phylum assignments matching the input genomes. The repository's `taxonomy.csv` must match your dataset before use.
+Comma-, tab-, and whitespace-delimited tables are accepted. Provide one row per genome and nonempty phylum assignments matching the input genomes. The bundled `Example_taxonomy.csv` matches the example matrices. For your own dataset, supply a taxonomy table with matching genome identifiers.
 
 Taxonomy annotates existing clusters; it does not influence clustering. Step 3b writes a `MAG_Phyla` field containing semicolon-separated genome–phylum pairs, which Step 8 carries into cluster node attributes.
 
@@ -161,7 +167,7 @@ All scripts below are in `scripts/`, except the Step 9 implementation embedded i
 | 6 | `06_feature_cluster_correlation.py` | One-vs-rest feature–cluster Spearman associations |
 | 7 | `07_cluster_cluster_correlation.py` | Spearman correlations between cluster profiles |
 | 8 | `08_merge_filtered_files.py` | Merge retained edges and create node attributes |
-| 9 | Embedded in `run_metguild_workflow.sh` | Build the SQLite provenance database and SQL reconstruction dump |
+| 9 | Embedded in `run_metguild_workflow.sh` | Build the SQLite provenance database, SQL reconstruction dump, and HTML workflow map |
 
 By default, candidate k values are the unique union of four KMeans selections (elbow/inertia, silhouette, Calinski–Harabasz, and Davies–Bouldin) and the hierarchical silhouette selection. `--candidate-source kmeans` uses the KMeans selections only.
 
@@ -209,7 +215,8 @@ my_dataset_run_01/
 │   └── network_construction_manifest.json
 └── 08_workflow_provenance/
     ├── my_dataset_workflow_provenance.db
-    └── my_dataset_workflow_provenance.sql
+    ├── my_dataset_workflow_provenance.sql
+    └── my_dataset_workflow_provenance.html
 ```
 
 For a KMeans solution with k=3, network filenames include:
@@ -219,11 +226,43 @@ For a KMeans solution with k=3, network filenames include:
 
 Edge tables contain `node1`, `node2`, signed `weight`, `abs_weight`, nonnegative `mcl_weight`, `p_value`, `adjusted_p_value`, and `edge_type`. Node tables contain `Node`, `Group`, `Original_Name`, `Method`, `K`, and `MAG_Phyla`.
 
-Before Step 9, the runner validates the network manifest, summary, edge lists, node tables, and reported row counts. Individual solutions may be empty, but the full run must contain at least one retained edge and a populated node table. If every solution has zero retained edges, the runner stops before SQL export; inspect the statistical and correlation summaries to understand the empty result.
+Before Step 9, the runner validates the network manifest, summary, edge lists, node tables, and reported row counts. Individual solutions may be empty, but the full run must contain at least one retained edge and a populated node table. If every solution has zero retained edges, the runner stops before the SQLite/SQL/HTML export; inspect the statistical and correlation summaries to understand the empty result.
 
-Manifests record parameters, software versions, paths, and SHA-256 fingerprints. These support provenance and consistency checks; they are not digital signatures. Step 9 imports scientific CSV/TSV/JSON artifacts into a local SQLite database and produces a SQL dump that can recreate it.
+Manifests record parameters, software versions, paths, and SHA-256 fingerprints. These support provenance and consistency checks; they are not digital signatures. Step 9 imports scientific CSV/TSV/JSON artifacts into a local SQLite database produces a SQL dump that can recreate it, and generates a browser-based workflow map.
 
 MetGuild runs locally and does not require application logins, API keys, or access tokens. Access to repository downloads and local files is handled separately by GitHub and the operating system.
+
+### HTML workflow map
+
+The HTML report is the main human-facing view of the run's scientific results. It is generated automatically in Step 9; no extra flag or web server is required.
+
+After the first binary example run, open:
+
+```text
+binary_matrix_run_01/08_workflow_provenance/binary_matrix_workflow_provenance.html
+```
+
+For the proportional example:
+
+```text
+proportional_matrix_run_01/08_workflow_provenance/proportional_matrix_workflow_provenance.html
+```
+
+Double-click the HTML file in your file manager or open it from your browser. Use the actual run directory printed by the launcher: subsequent runs use `_run_02`, `_run_03`, etc., and `--output-dir` changes the location.
+
+The map supports:
+
+- Searching by filename, path, method, or result type.
+- Filtering by workflow step, result type, clustering method, and candidate k.
+- Selecting a result node to inspect its upstream/downstream links, file path, checksum, dimensions, and preview.
+- Previewing tables (up to 30 rows and 80 columns) and figures, and opening original result files or interactive plots.
+- Zooming the graph to explore its connections.
+
+The map shows original sources, main scientific figures, tables used by later analysis stages, and final network tables. Diagnostic matrices, summaries, manifests, logs, and helper files are intentionally hidden from this view but remain recorded in SQLite/SQL.
+
+Method/k filters retain the selected solution and its shared upstream sources. Candidate-k plot links come from the Step 1 manifest: the combined diagnostic connects to both clustering branches, while the dedicated hierarchical candidate-k plot connects to hierarchical solutions.
+
+The report embeds its graph data and table previews, but figure previews and original-result links use relative paths to files in the run directory. **Keep or share the complete run directory**, preserving its structure, so those links continue to work; copying only the HTML file is insufficient for all previews and results.
 
 ## Repository structure
 
@@ -233,7 +272,10 @@ MetGuild_workflow/
 ├── LICENSE
 ├── environment.yml
 ├── run_metguild_workflow.sh
-├── taxonomy.csv
+├── Example_taxonomy.csv
+├── Example_dataset/
+│   ├── binary_matrix.csv
+│   └── proportional_matrix.tsv
 └── scripts/
     ├── 01_removing_zero_columns_K_Optimization.py
     ├── 02_kmeans_mds_clustering.py
@@ -249,11 +291,19 @@ MetGuild_workflow/
 
 ## Datasets and availability
 
-The current repository does not contain the previously documented example-dataset folders. Supply your own matrices.
+Two runnable example matrices and their matching taxonomy table are bundled:
+
+| File | Contents |
+|---|---|
+| [Example_dataset/binary_matrix.csv](Example_dataset/binary_matrix.csv) | 127 genomes × 227 binary feature columns, plus `Genomes` |
+| [Example_dataset/proportional_matrix.tsv](Example_dataset/proportional_matrix.tsv) | 127 genomes × 29 proportional feature columns, plus `Genomes` |
+| [Example_taxonomy.csv](Example_taxonomy.csv) | Matching genome-to-phylum annotations |
+
+Use the [quick-start commands](#quick-start) to run these examples. Feature counts above describe the input matrices before cleaning. You can also supply your own compatible matrices.
 
 The manuscript describes six dataset types: targeted gene/pathway presence–absence (DSK_DB), targeted pathway proportions (DSK_P_DB), MAG-level KEGG presence–absence (MAG_KEGG_DB), MAG-level KEGG proportions (MAG_KEGG_P_DB), genome-reconstruction versus KEGG modules (GSMR_KEGG_DB), and PROKKA-derived gene presence–absence (PROKKA_DB).
 
-Raw-data accessions, dataset download links, and a final data DOI remain to be supplied.
+The bundled matrices are available through the links above. Raw-data accessions, links for the remaining manuscript datasets, and a final data DOI remain to be supplied.
 
 ## External tools
 
