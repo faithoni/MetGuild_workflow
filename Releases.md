@@ -1,5 +1,19 @@
 # Release notes
 
+## 0.1.0-rc.2 — release candidate
+
+Prepared on 2026-11-16.
+
+### Fixed
+
+- Restored explicit lineage from the cleaned matrix to the hierarchical candidate-k figure, and from that figure to hierarchical clustering solutions.
+- Restored details-panel updates when search or filters change: visible selections refresh, and hidden selections clear.
+- Corrected corrupted ellipsis, bullet, and minus characters in HTML previews, graph labels, and zoom controls.
+
+### Release metadata
+
+Updated VERSION, README, and the release acceptance checklist to 0.1.0-rc.2. This candidate restores the HTML-map behavior documented for rc.1; analysis algorithms and statistical defaults are unchanged. Preparing these files does not publish a Git tag or GitHub release.
+
 ## 0.1.0-rc.1 — release candidate
 
 Prepared on 2026-11-13. This is a prerelease candidate for validation, not a stable release. The source version is recorded in [VERSION](VERSION); preparation does not create a Git tag or publish a GitHub release.

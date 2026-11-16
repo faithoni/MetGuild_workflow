@@ -1,6 +1,6 @@
 # MetGuild Workflow
 
-**Release candidate: `0.1.0-rc.1`** — prepared for validation, not a stable release. The canonical version is in [VERSION](VERSION). See [release notes](Releases.md) and the [release acceptance checklist](RELEASE_CHECKLIST.md) for tested scope and outstanding checks.
+**Release candidate: `0.1.0-rc.2`** — prepared for validation, not a stable release. The canonical version is in [VERSION](VERSION). See [release notes](Releases.md) and the [release acceptance checklist](RELEASE_CHECKLIST.md) for tested scope and outstanding checks.
 
 A reproducible downstream workflow for defining metabolic potential guilds from functionally annotated, genome-centric metagenomic data.
 

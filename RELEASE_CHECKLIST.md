@@ -1,6 +1,6 @@
 # Release acceptance checklist
 
-Candidate: **0.1.0-rc.1**. Canonical version: [VERSION](VERSION).
+Candidate: **0.1.0-rc.2**. Canonical version: [VERSION](VERSION).
 This checklist records remaining acceptance work; unchecked items are not claimed as passed. Benchmarking is outside this release-preparation scope.
 
 ## Fresh environment and Bash launcher
@@ -12,8 +12,8 @@ git rev-parse HEAD
 cat VERSION
 bash --version
 conda --version
-conda env create -n metguild_rc_010rc1 -f environment.yml
-conda activate metguild_rc_010rc1
+conda env create -n metguild_rc_010rc2 -f environment.yml
+conda activate metguild_rc_010rc2
 conda list
 bash -n run_metguild_workflow.sh
 bash run_metguild_workflow.sh --help
@@ -66,7 +66,7 @@ Record browser name/version and any console errors.
 - [ ] Record the tested commit SHA and attach or link acceptance evidence.
 - [ ] Resolve any blocking failures and repeat affected checks.
 - [ ] Confirm VERSION, README, and Releases.md agree on the intended release version.
-- [ ] When publishing this candidate, use tag v0.1.0-rc.1 and mark the GitHub release as a prerelease.
+- [ ] When publishing this candidate, use tag v0.1.0-rc.2 and mark the GitHub release as a prerelease.
 - [ ] Before a stable release, complete outstanding acceptance checks and update version and release notes.
 
 Tag creation and publication are separate from preparing these files.
