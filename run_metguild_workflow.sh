@@ -2101,7 +2101,7 @@ def generate_html_report(con: sqlite3.Connection, destination: Path, run_dir: Pa
                 text_value = json.dumps(value, indent=2, ensure_ascii=False)
             else:
                 text_value = path.read_text(encoding="utf-8-sig", errors="replace")
-            return text_value[:max_chars] + ("\n… preview truncated …" if len(text_value) > max_chars else "")
+            return text_value[:max_chars] + ("\nâ€¦ preview truncated â€¦" if len(text_value) > max_chars else "")
         except Exception as exc:
             return f"Preview error: {exc}"
 
@@ -2233,32 +2233,20 @@ def generate_html_report(con: sqlite3.Connection, destination: Path, run_dir: Pa
             step1_manifest = {}
         cleaned_node = node_for_declared_path(step1_manifest.get("cleaned_output_file"))
         plot_node = node_for_declared_path(step1_manifest.get("kopt_plot"))
-        hierarchical_plot_node = node_for_declared_path(step1_manifest.get("hierarchical_kopt_plot"))
-        # Candidate-k score tables and the manifest remain in SQLite but are
-        # intentionally hidden from the curated browser map. Both visible plots are
-        # linked only through the explicit paths declared by the Step 1 manifest.
+        # kopt_scores and the manifest remain in SQLite but are intentionally hidden
+        # from the curated browser map. The manifest explicitly declares the cleaned
+        # matrix and plot, so this visible relationship is deterministic.
         add_browser_edge(cleaned_node, plot_node, "visualizes_candidate_k_selection")
-        add_browser_edge(cleaned_node, hierarchical_plot_node, "visualizes_hierarchical_candidate_k_selection")
 
         candidate_values = step1_manifest.get("unique_k_values")
         if not isinstance(candidate_values, list):
             candidate_values = []
         candidate_values = {int(v) for v in candidate_values if str(v).strip().isdigit()}
-        for candidate_node in nodes:
-            if candidate_node["type"] != "table" or candidate_node["clusters"] not in candidate_values:
-                continue
-            # kopt_plot is the combined six-panel diagnostic and therefore provides
-            # candidate-k evidence for both downstream clustering branches.
-            if plot_node and candidate_node["step"] in {2, 3}:
-                add_browser_edge(plot_node, candidate_node, "candidate_k_evidence_for_solution")
-            # hierarchical_kopt_plot is the dedicated average-linkage silhouette
-            # diagnostic and should feed only hierarchical clustering solutions.
-            if hierarchical_plot_node and candidate_node["step"] == 3:
-                add_browser_edge(
-                    hierarchical_plot_node,
-                    candidate_node,
-                    "hierarchical_candidate_k_evidence_for_solution",
-                )
+        if plot_node:
+            for candidate_node in nodes:
+                if candidate_node["step"] in {2, 3} and candidate_node["type"] == "table":
+                    if candidate_node["clusters"] in candidate_values:
+                        add_browser_edge(plot_node, candidate_node, "candidate_k_evidence_for_solution")
 
     # KMeans and hierarchical figures are linked to the cluster-assignment table
     # only when that relationship is unambiguous within the exact method/k context.
@@ -2450,7 +2438,7 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
     while (value >= 1024 && index < units.length - 1) { value /= 1024; index += 1; }
     return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
   };
-  const shortName = name => name.length > 38 ? `${name.slice(0, 35)}…` : name;
+  const shortName = name => name.length > 38 ? `${name.slice(0, 35)}â€¦` : name;
 
   function nodeMatchesSolution(node, method, cluster) {
     if (!node) return false;
@@ -2658,7 +2646,7 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
       if (node.method) parts.push(node.method);
       if (node.clusters !== null) parts.push(`k=${node.clusters}`);
       if (node.row_count !== null) parts.push(`${node.row_count} rows`);
-      meta.textContent = parts.join(' • '); group.appendChild(meta);
+      meta.textContent = parts.join(' â€¢ '); group.appendChild(meta);
 
       const pathText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       pathText.setAttribute('x', 12); pathText.setAttribute('y', 60); pathText.setAttribute('class', 'node-meta');
@@ -2748,19 +2736,7 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
     `Completed: <strong>${escapeHtml(rootData.run.completed_at)}</strong>`
   ].map(item => `<span>${item}</span>`).join('');
 
-  function handleFilterChange() {
-    const visible = currentNodes();
-    if (selectedId && visible.some(node => node.id === selectedId)) {
-      // Refresh relationships and preview for the active filter context.
-      selectNode(selectedId);
-    } else {
-      selectedId = null;
-      details.innerHTML = '<div class="empty">Select a main result node to inspect its file, preview, inputs, and downstream outputs.</div>';
-      renderGraph();
-    }
-  }
-
-  [search, stepFilter, typeFilter, methodFilter, clusterFilter].forEach(control => control.addEventListener('input', handleFilterChange));
+  [search, stepFilter, typeFilter, methodFilter, clusterFilter].forEach(control => control.addEventListener('input', renderGraph));
   document.getElementById('zoomIn').addEventListener('click', () => { zoom = Math.min(1.8, zoom + 0.1); applyZoom(); });
   document.getElementById('zoomOut').addEventListener('click', () => { zoom = Math.max(0.5, zoom - 0.1); applyZoom(); });
 
@@ -2789,7 +2765,7 @@ pre { white-space: pre-wrap; word-break: break-word; max-height: 390px; overflow
   <div class="control"><label for="typeFilter">Result type</label><select id="typeFilter"><option value="">All types</option></select></div>
   <div class="control"><label for="methodFilter">Method</label><select id="methodFilter"><option value="">All methods</option></select></div>
   <div class="control"><label for="clusterFilter">Candidate k</label><select id="clusterFilter"><option value="">All candidate k values</option></select></div>
-  <button id="zoomOut" type="button" aria-label="Zoom out">−</button>
+  <button id="zoomOut" type="button" aria-label="Zoom out">âˆ’</button>
   <button id="zoomIn" type="button" aria-label="Zoom in">+</button>
 </section>
 <p class="trace-note">This curated map shows only original source inputs, main scientific figures, tables consumed by a later analysis step, and final network tables. Diagnostic/intermediate matrices, summaries, manifests, p-value matrices, flattened tables, logs, and helper files remain recorded in SQLite/SQL but are intentionally hidden here. Method/<em>k</em> filters preserve only the selected solution plus shared upstream sources.</p>
