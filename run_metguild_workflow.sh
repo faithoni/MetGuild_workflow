@@ -5,6 +5,9 @@ set -euo pipefail
 # MetGuild full workflow runner (Steps 1-9)
 # ------------------------------------------------------------
 
+# Resolve user-supplied relative paths from the directory where MetGuild
+# was invoked, not from the repository or Conda installation directory.
+INVOCATION_DIR="$(pwd)"
 WORKFLOW_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
@@ -19,13 +22,22 @@ Before running MetGuild
 
    conda activate metguild_workflow
 
-2. Change to the MetGuild repository directory, for example:
+2. Change to the directory containing your input files (or where you
+   want to create output directories), for example:
 
-   cd /path/to/MetGuild_updated
+   cd /path/to/my_analysis
 
-3. Run the workflow:
+3. Run the workflow from a cloned repository:
 
-   bash run_metguild_workflow.sh <input_matrix> [MAX_K] [OPTIONS]
+   bash /path/to/MetGuild_workflow/run_metguild_workflow.sh <input_matrix> [MAX_K] [OPTIONS]
+
+   Or, after installing MetGuild from Bioconda:
+
+   metguild <input_matrix> [MAX_K] [OPTIONS]
+
+Relative input, taxonomy, and output paths resolve from the directory
+where you invoke the command. The workflow's bundled scripts are located
+using the launcher directory.
 
 The Conda environment should be activated before every new shell/session in
 which MetGuild is run. The workflow runner does not activate Conda itself.
@@ -389,7 +401,7 @@ PY
 if [[ "$INPUT_FILE" = /* ]]; then
     ABS_INPUT_FILE="$INPUT_FILE"
 else
-    ABS_INPUT_FILE="$WORKFLOW_ROOT/$INPUT_FILE"
+    ABS_INPUT_FILE="$INVOCATION_DIR/$INPUT_FILE"
 fi
 if [ ! -f "$ABS_INPUT_FILE" ] || [ ! -r "$ABS_INPUT_FILE" ]; then
     echo "Error: Input file does not exist or is not readable: $ABS_INPUT_FILE" >&2
@@ -402,7 +414,7 @@ if [[ -n "$TAXONOMY_FILE_ARG" ]]; then
     if [[ "$TAXONOMY_FILE_ARG" = /* ]]; then
         ABS_TAXONOMY_FILE="$TAXONOMY_FILE_ARG"
     else
-        ABS_TAXONOMY_FILE="$WORKFLOW_ROOT/$TAXONOMY_FILE_ARG"
+        ABS_TAXONOMY_FILE="$INVOCATION_DIR/$TAXONOMY_FILE_ARG"
     fi
     if [ ! -f "$ABS_TAXONOMY_FILE" ] || [ ! -r "$ABS_TAXONOMY_FILE" ]; then
         echo "Error: Taxonomy file does not exist or is not readable: $ABS_TAXONOMY_FILE" >&2
@@ -422,7 +434,7 @@ if [[ -z "$OUTPUT_DIR_ARG" ]]; then
     RUN_NUMBER=1
     while :; do
         printf -v RUN_SUFFIX "%02d" "$RUN_NUMBER"
-        CANDIDATE_OUTPUT_DIR="$WORKFLOW_ROOT/${INPUT_PREFIX}_run_${RUN_SUFFIX}"
+        CANDIDATE_OUTPUT_DIR="$INVOCATION_DIR/${INPUT_PREFIX}_run_${RUN_SUFFIX}"
         if [ ! -e "$CANDIDATE_OUTPUT_DIR" ] && [ ! -L "$CANDIDATE_OUTPUT_DIR" ]; then
             OUTPUT_DIR="$CANDIDATE_OUTPUT_DIR"
             break
@@ -436,7 +448,7 @@ if [[ -z "$OUTPUT_DIR_ARG" ]]; then
 elif [[ "$OUTPUT_DIR_ARG" = /* ]]; then
     OUTPUT_DIR="$OUTPUT_DIR_ARG"
 else
-    OUTPUT_DIR="$WORKFLOW_ROOT/$OUTPUT_DIR_ARG"
+    OUTPUT_DIR="$INVOCATION_DIR/$OUTPUT_DIR_ARG"
 fi
 
 if [ -e "$OUTPUT_DIR" ] || [ -L "$OUTPUT_DIR" ]; then
