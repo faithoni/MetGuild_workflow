@@ -1,6 +1,6 @@
 # Release checklist
 
-Version: [0.1.0](VERSION). Publication: tag `v0.1.0`, title **MetGuild v0.1.0**, prerelease unchecked.
+Version: [0.1.0](VERSION). Publication: tag `v0.1.0`, title **MetGuild v0.1.0**
 
 Prior checks covered Python stages for both examples, network/database consistency, and programmatic map filtering. Fresh-Conda Bash runs and complete real-browser checks remain unverified; the new invocation-relative path behavior has not been tested end to end.
 
@@ -9,4 +9,4 @@ Prior checks covered Python stages for both examples, network/database consisten
 - [ ] Record tested commit, environment, logs, and any outstanding checks.
 - [ ] Confirm version consistency and publish the tag/release at the intended commit.
 
-Unchecked items are not claimed as passed. Version preparation alone does not publish a release.
+
