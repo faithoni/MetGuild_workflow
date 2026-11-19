@@ -1,6 +1,6 @@
 # MetGuild Workflow
 
-**Release candidate: `0.1.0-rc.2`** — prepared for validation, not a stable release. The canonical version is in [VERSION](VERSION). See [release notes](Releases.md) and the [release acceptance checklist](RELEASE_CHECKLIST.md) for tested scope and outstanding checks.
+**Version: `0.1.0`** — stable release source. The canonical version is in [VERSION](VERSION). See the [release notes](Releases.md) for changes and the [release checklist](RELEASE_CHECKLIST.md) for the recorded validation status.
 
 A reproducible downstream workflow for defining metabolic potential guilds from functionally annotated, genome-centric metagenomic data.
 
@@ -65,7 +65,7 @@ bash run_metguild_workflow.sh data/my_dataset.tsv 15 \
 
 The workflow is non-interactive. Step 4 selects chi-square for binary matrices and ANOVA for proportional matrices from the recorded matrix type, not the input filename.
 
-Absolute paths are supported. Relative input, taxonomy, and output-directory paths are resolved from the directory containing `run_metguild_workflow.sh`.
+Absolute paths are supported. Relative input, taxonomy, and output-directory paths are resolved from the directory where you invoke the command. Bundled scripts are located relative to the launcher.
 
 ## Input requirements
 
@@ -188,7 +188,7 @@ Treat the results as exploratory association screening. Correction is performed 
 
 ## Outputs and provenance
 
-For `my_dataset.tsv`, the runner creates `my_dataset_run_01/` under the workflow directory. Later runs use `_run_02`, `_run_03`, etc. Use `--output-dir` to select another fresh directory.
+For `my_dataset.tsv`, the runner creates `my_dataset_run_01/` under the directory where you invoke the command. Later runs use `_run_02`, `_run_03`, etc. Use `--output-dir` to select another fresh directory.
 
 A complete run is organized as follows:
 

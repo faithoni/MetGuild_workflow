@@ -1,5 +1,34 @@
 # Release notes
 
+## 0.1.0 — stable release
+
+Prepared on 2026-11-19. Promotes the workflow source from 0.1.0-rc.2 to 0.1.0. Analysis algorithms, statistical defaults, and output formats are unchanged.
+
+### Changed
+
+Relative input, taxonomy, and output paths now resolve from the directory where the command is invoked. Automatically numbered output directories are also created there. Bundled scripts continue to resolve relative to the launcher. Running the documented examples from the repository directory retains the same behavior.
+
+### Included functionality
+
+- Complete workflow for binary presence/absence and proportional genome-by-feature matrices, with optional taxonomy annotation.
+- Candidate-k selection, classical-MDS/KMeans and average-linkage hierarchical clustering, statistical screening, and filtered Spearman association networks.
+- Network edge lists and node attributes with solution-specific cluster identifiers.
+- SQLite provenance database, SQL reconstruction dump, and interactive HTML workflow map with search, filters, previews, and result links.
+- Bundled binary and proportional example datasets with matching taxonomy.
+
+### Fixes carried forward
+
+- pandas 3 compatibility for correlation-matrix updates.
+- Preservation of string genome identifiers and numeric-looking feature names.
+- Distinct feature and cluster-node identifiers in network exports.
+- Hierarchical candidate-k figure connections, details-panel refresh and clearing when filters change, and corrected HTML text encoding.
+
+### Usage
+
+Follow the [README quick start](README.md#quick-start). Keep the complete output directory when sharing HTML reports so previews and result links remain accessible.
+
+This version change does not assert additional test coverage; the [release checklist](RELEASE_CHECKLIST.md) retains the recorded status. Tag creation and GitHub publication are separate from this source preparation.
+
 ## 0.1.0-rc.2 — release candidate
 
 Prepared on 2026-11-16.
